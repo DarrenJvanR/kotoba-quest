@@ -1,5 +1,5 @@
 // Offline support: app files are fetched fresh when online and served from cache when not.
-const CACHE = 'kotoba-quest-v10';
+const CACHE = 'kotoba-quest-v11';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/app.js', 'js/kana.js', 'js/vocab.js', 'js/phrases.js', 'js/kanji.js', 'js/stories.js', 'js/fsrs.js', 'js/store.js',

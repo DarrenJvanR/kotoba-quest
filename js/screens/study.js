@@ -165,8 +165,8 @@ export function kanjiCard(k, footer = '', isNew = true) {
       <div class="glyph kanji">${k.char}</div>
       <div class="meaning big">${esc(k.meaning)}</div>
       ${readings ? `<div class="readings">${readings}</div><div class="readings-hint">hiragana: Japanese reading · katakana: Chinese-origin reading</div>` : ''}
-      ${parts.length ? `<div class="parts">Built from ${parts.map((p) => `<span class="part"><b class="kana">${p.char}</b> ${esc(p.meaning)}</span>`).join(' + ')}</div>` : ''}
-      <p class="mnemonic">${esc(state.notes[k.key] || k.mnemonic)}</p>
+      ${parts.length ? `<div class="parts">Look for ${parts.map((p) => `<span class="part"><b class="kana">${p.char}</b> ${esc(p.meaning)}</span>`).join(' + ')}</div>` : ''}
+      <p class="mnemonic"><span class="aid-label">Memory story · a memory aid, not the kanji's real history</span>${esc(state.notes[k.key] || k.mnemonic)}</p>
       ${k.words.length ? `<div class="kwords">${k.words.slice(0, 4).map(word).join('')}</div>` : ''}
       ${footer}
     </div>`;

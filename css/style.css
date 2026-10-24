@@ -486,6 +486,8 @@ body.in-session .word-kanji { font-size: 72px; }
 .plot-art { display: block; width: 100%; height: 76px; object-fit: contain; filter: drop-shadow(0 3px 2px #0007); }
 .plot.empty .plot-art { opacity: .7; filter: saturate(.6); }
 .plot-lock { position: absolute; top: 6px; left: 8px; font-size: 14px; }
+.plot.locked { filter: saturate(.5); }
+.plot.locked .plot-art { opacity: .55; }
 .building-art { display: block; margin: 0 auto 6px; max-width: 70%; max-height: 200px; filter: drop-shadow(0 4px 4px #0008); }
 .building-art.preview { max-height: 120px; opacity: .85; }
 .plot-name { font-size: 12px; }
@@ -612,6 +614,7 @@ body.kb-open .top { display: none; }
 button.reading-chip { cursor: pointer; }
 button.reading-chip:hover { box-shadow: inset 0 0 0 1px var(--gold); }
 .reading-chip.on { color: var(--blue); }
+.aid-label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .readings-hint { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .kword { font: inherit; font-family: var(--kana-font); font-size: 14px; color: var(--ink); text-align: left; background: none; border: 0; padding: 4px 0; }
 button.kword { cursor: pointer; }
