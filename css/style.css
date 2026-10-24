@@ -418,7 +418,10 @@ body.in-session .card { padding: 16px; }
 .word { font-size: 46px; line-height: 1.3; margin: 6px 0; word-break: keep-all; }
 .meaning { font-family: var(--kana-font); font-size: 20px; margin: 4px 0; }
 .meaning.big { font-size: 24px; color: var(--gold); }
-.kanji-note { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.kanji-note { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.word-kanji { font-size: 80px; line-height: 1.1; margin-top: 4px; }
+.word-reading { font-size: 28px; line-height: 1.3; color: var(--ink); opacity: .9; letter-spacing: 2px; }
+body.in-session .word-kanji { font-size: 72px; }
 .kanji-note .kana { color: var(--ink); font-size: 18px; }
 .choices.list { grid-template-columns: 1fr; }
 .choices.list .choice { font-size: 17px; font-family: var(--kana-font); padding: 14px 12px 14px 34px; text-align: left; }

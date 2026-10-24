@@ -3,7 +3,7 @@ import * as store from '../store.js';
 import { state } from '../store.js';
 import { GROUPS, BY_KANA } from '../kana.js';
 import { WORDS, WORD_BY_KEY, isUnlocked, wordTip } from '../vocab.js';
-import { view, $, $$, esc, plural, setScreen, screens, openModal, audioBtn } from '../ui.js';
+import { view, $, $$, esc, plural, setScreen, screens, openModal, audioBtn, wordHead } from '../ui.js';
 
 export const LEVEL_LABEL = { unseen: 'Not learned yet', learning: 'Learning', known: 'Known', mastered: 'Mastered' };
 // Every level also has a symbol, so it never depends on telling colours apart.
@@ -102,10 +102,10 @@ export function openWord(key) {
   const tip = wordTip(w);
   openModal(`
     <div class="emoji center">${w.emoji}</div>
-    <div class="word kana center">${esc(w.kana)}</div>
+    <div class="center">${wordHead(w)}</div>
     <div class="romaji">${esc(w.romaji)} ${audioBtn(w.kana)}</div>
     <div class="meaning center">${esc(w.meaning)}</div>
-    ${w.kanji ? `<div class="kanji-note center">In kanji: <span class="kana">${esc(w.kanji)}</span></div>` : ''}
+    ${w.kanji ? '' : '<div class="kanji-note center">Usually written in kana, no kanji</div>'}
     ${levelBadge(w.key)}
     ${cardFacts(w.key)}
     ${tip ? `<p class="mnemonic">${esc(tip)}</p>` : ''}`);

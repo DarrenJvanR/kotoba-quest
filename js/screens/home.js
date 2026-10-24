@@ -61,7 +61,7 @@ function showHome() {
         <div><b>${newPhrases.length}</b><span>new phrases</span></div>
         ${store.kanjiOpen() ? `<div><b>${newKanji.length}</b><span>new kanji</span></div>` : ''}
       </div>
-      ${newCount ? chips([...newKana, ...newWords, ...newKanji].map((it) => it.kana)) : ''}
+      ${newCount ? chips([...newKanji, ...newKana, ...newWords].map((it) => it.kana)) : ''}
       ${newPhrases.length ? `<div class="phrase-preview">${newPhrases.map((p) => `<div><span class="kana">${esc(p.jp)}</span> <span class="muted">${esc(p.en)}</span></div>`).join('')}</div>` : ''}
       <button class="btn primary big" id="start">⚔️ Start battle · about ${plural(mins, 'min')}</button>`;
   } else {

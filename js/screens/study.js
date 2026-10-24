@@ -8,7 +8,7 @@ import { wordTip } from '../vocab.js';
 import { KANJI_BY_CHAR } from '../kanji.js';
 import { speak, hasVoice } from '../speech.js';
 import { sfx } from '../sfx.js';
-import { view, modal, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips, confirmDialog } from '../ui.js';
+import { view, modal, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips, confirmDialog, wordHead } from '../ui.js';
 
 let session = null;
 let battle = null;
@@ -115,10 +115,10 @@ function renderIntro(step) {
     <div class="card intro pop">
       <div class="tag">New word · ${esc(it.theme)}</div>
       <div class="emoji">${it.emoji}</div>
-      <div class="word kana">${esc(it.kana)}</div>
+      ${wordHead(it)}
       <div class="romaji">${esc(it.romaji)}</div>
       <div class="meaning">${esc(it.meaning)}</div>
-      ${it.kanji ? `<div class="kanji-note">In kanji: <span class="kana">${esc(it.kanji)}</span></div>` : ''}
+      ${it.kanji ? '' : '<div class="kanji-note">Usually written in kana, no kanji</div>'}
       ${tip ? `<p class="mnemonic">${esc(tip)}</p>` : ''}
       <div class="row">${audioBtn(it.kana)}<button class="btn primary grow" id="next">Got it →</button></div>
     </div>` : `
@@ -193,7 +193,7 @@ function promptHtml(step) {
     case 'type': return `${p}<div class="glyph kana">${it.kana}</div>`;
     case 'pick': return `${p}<div class="romaji big">${it.romaji}</div>${audioBtn(it.kana)}`;
     case 'listen': return `${p}<button class="btn listen" data-say="${esc(it.kana)}">🔊 Play again</button>`;
-    case 'meaning': return `${p}<div class="word kana">${esc(it.kana)}</div>`;
+    case 'meaning': return `${p}${wordHead(it)}`;
     case 'reverse':
     case 'recall': return `${p}<div class="emoji">${it.emoji}</div><div class="meaning big">${esc(it.meaning)}</div>`;
     case 'kmeaning': return `${p}<div class="glyph kanji">${it.char}</div>`;
@@ -366,7 +366,7 @@ function renderQuiz(step) {
     else if (it.type === 'kanji') answerLine = `<b class="kana">${it.char}</b> ${esc(it.meaning)} <span class="kana muted">${esc(it.readings)}</span>`;
     else if (it.type === 'sentence') answerLine = correct ? 'Nice! It\'ll come back later.' : 'It\'ll come back again soon.';
     else if (it.type === 'phrase') answerLine = `<b class="kana">${esc(it.jp)}</b><br><span>${esc(it.romaji)}</span> · ${esc(it.en)}`;
-    else if (it.type === 'word') answerLine = `<b class="kana">${esc(it.kana)}</b> <span>${esc(it.romaji)}</span> · ${esc(it.meaning)}`;
+    else if (it.type === 'word') answerLine = `<b class="kana">${it.kanji ? `${esc(it.kanji)}（${esc(it.kana)}）` : esc(it.kana)}</b> <span>${esc(it.romaji)}</span> · ${esc(it.meaning)}`;
     else answerLine = `<b class="kana">${it.kana}</b> = ${it.romaji}`;
 
     if (correct) {

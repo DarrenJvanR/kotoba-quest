@@ -142,6 +142,12 @@ export class Session {
     for (const it of due) this.steps.push(this.quiz(it, { first: true }));
 
     const newItems = [];
+    // New kanji lead, so a learner who switched kanji on meets them first, not after everything else.
+    const kanji = store.nextNewKanji();
+    for (const k of kanji) this.steps.push({ type: 'intro', item: k });
+    for (const k of shuffle(kanji)) this.steps.push(this.quiz(k, { first: true, isNew: true, mode: 'kmeaning' }));
+    for (const k of shuffle(kanji)) this.steps.push(this.quiz(k, { mode: 'kchar' }));
+    newItems.push(...kanji);
     for (const { group, items } of store.nextNewGroups()) {
       for (const it of items) this.steps.push({ type: 'intro', item: it, group });
       for (const it of shuffle(items)) this.steps.push(this.quiz(it, { first: true, isNew: true, mode: 'pick' }));
@@ -158,11 +164,6 @@ export class Session {
     for (const p of shuffle(phrases)) this.steps.push(this.quiz(p, { first: true, isNew: true, mode: 'pmeaning' }));
     for (const p of shuffle(phrases)) this.steps.push(this.quiz(p, { mode: p.chunks.length > 1 ? 'pbuild' : 'psay' }));
     newItems.push(...phrases);
-    const kanji = store.nextNewKanji();
-    for (const k of kanji) this.steps.push({ type: 'intro', item: k });
-    for (const k of shuffle(kanji)) this.steps.push(this.quiz(k, { first: true, isNew: true, mode: 'kmeaning' }));
-    for (const k of shuffle(kanji)) this.steps.push(this.quiz(k, { mode: 'kchar' }));
-    newItems.push(...kanji);
 
     this.newCount = newItems.length;
     this.pool = new Set([...Object.keys(store.state.cards), ...newItems.map((it) => it.key)]);
