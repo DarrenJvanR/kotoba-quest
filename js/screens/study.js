@@ -22,7 +22,9 @@ function startSession() {
   if (s.done) return go('home');
   setScreen('session', { tab: 'home', session: true });
   session = s;
-  battle = new Battle(s.questionCount);
+  // A heart charm from the shop is used up at the start of the battle.
+  const charmed = store.useItem('charms');
+  battle = new Battle(s.questionCount, { bonusHearts: charmed ? 2 : 0 });
   view.innerHTML = `
     <div class="session-top">
       <button class="btn small ghost quit-btn" id="quit">✕ Leave</button>
@@ -33,6 +35,7 @@ function startSession() {
     <div id="stage"></div>`;
   scene = new BattleScene($('#battle'), battle);
   scene.start();
+  if (charmed) setTimeout(() => scene?.say('💗 Heart charm: 7 hearts this battle!', 2200), 700);
   onLeave(() => {
     scene?.destroy();
     scene = null;
@@ -247,6 +250,18 @@ function renderQuiz(step) {
   if (step.mode === 'pgap') answerKey = `gap:${it.chunks[step.gap]}`;
   let answered = false;
 
+  // Hint scrolls from the shop: one per question. A hinted answer is graded no higher than
+  // "hard", so the card comes back sooner.
+  const hintHtml = () => (store.owned('hints') && !step.hinted
+    ? `<button type="button" class="btn small ghost hint-btn" id="hint">💡 Hint <b>${store.owned('hints')}</b></button>`
+    : '');
+  const takeHint = () => {
+    if (answered || step.hinted || !store.useItem('hints')) return false;
+    step.hinted = true;
+    sfx('learn');
+    return true;
+  };
+
   if (step.mode === 'sentence') {
     stage.innerHTML = `
       <div class="card quiz">
@@ -289,9 +304,18 @@ function renderQuiz(step) {
           <div class="meaning big">${esc(it.en)}</div>
           <div class="build-line">${placed.map((t, n) => `<button class="chunk placed kana" data-n="${n}">${esc(t.text)}</button>`).join('') || '<span class="muted">Tap the words below</span>'}</div>
           <div class="build-tiles">${tiles.map((t, n) => `<button class="chunk kana" data-t="${n}" ${placed.includes(t) ? 'disabled' : ''}><small>${n + 1}</small>${esc(t.text)}</button>`).join('')}</div>
+          <div class="hint-row">${answered ? '' : hintHtml()}</div>
           <div id="fb"></div>
         </div>`;
       $$('.chunk[data-t]', stage).forEach((b) => { b.onclick = () => place(tiles[Number(b.dataset.t)]); });
+      $('#hint', stage)?.addEventListener('click', () => {
+        if (!takeHint()) return;
+        const wrongAt = placed.findIndex((t, n) => t.text !== it.chunks[n]);
+        if (wrongAt >= 0) placed.splice(wrongAt);
+        const next = tiles.find((t) => !placed.includes(t) && t.text === it.chunks[placed.length]);
+        if (next) place(next);
+        else draw();
+      });
       $$('.chunk.placed', stage).forEach((b) => { b.onclick = () => { if (answered) return; placed.splice(Number(b.dataset.n), 1); draw(); }; });
     };
     const place = (t) => {
@@ -319,6 +343,7 @@ function renderQuiz(step) {
           <input id="ans" class="answer" placeholder="${placeholder}" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
           <div class="row"><button type="button" class="btn ghost" id="idk">Not sure</button><button class="btn primary grow">Check</button></div>
         </form>
+        <div class="hint-row">${hintHtml()}<span class="hint-text" id="hintText"></span></div>
         <div id="fb"></div>
       </div>`;
     const input = $('#ans');
@@ -330,6 +355,13 @@ function renderQuiz(step) {
       if (input.value.trim()) finish(isCorrect(it, input.value), input.value.trim());
     });
     $('#idk').onclick = () => finish(false);
+    $('#hint')?.addEventListener('click', () => {
+      if (!takeHint()) return;
+      const shown = it.romaji.slice(0, it.type === 'kana' ? 1 : Math.min(2, it.romaji.length - 1) || 1);
+      $('#hintText').textContent = `Starts with “${shown}…”`;
+      $('#hint').remove();
+      input.focus();
+    });
   } else {
     const textual = ['meaning', 'listen', 'kmeaning', 'pmeaning', 'psay', 'plisten'].includes(step.mode) && it.type !== 'kana';
     const wordGrid = ['reverse', 'kread', 'pgap'].includes(step.mode);
@@ -339,10 +371,16 @@ function renderQuiz(step) {
         <div class="choices ${textual ? 'list' : ''} ${wordGrid ? 'words' : ''}">
           ${step.choices.map((c, i) => `<button class="choice" data-k="${esc(c.key)}"><small>${i + 1}</small>${choiceLabel(step, c)}</button>`).join('')}
         </div>
+        <div class="hint-row">${hintHtml()}</div>
         <div id="fb"></div>
       </div>`;
     const buttons = $$('.choice', stage);
     buttons.forEach((b) => { b.onclick = () => choose(b); });
+    $('#hint')?.addEventListener('click', () => {
+      if (!takeHint()) return;
+      shuffle(buttons.filter((b) => b.dataset.k !== answerKey)).slice(0, 2).forEach((b) => { b.disabled = true; b.classList.add('ruled-out'); });
+      $('#hint').remove();
+    });
     if (step.mode === 'listen' || step.mode === 'plisten') speak(it.kana);
     setKeys((e) => {
       const n = Number(e.key);
@@ -351,7 +389,7 @@ function renderQuiz(step) {
   }
 
   function choose(btn) {
-    if (answered) return;
+    if (answered || btn.disabled) return;
     const ok = btn.dataset.k === answerKey;
     $$('.choice', stage).forEach((b) => { b.disabled = true; });
     btn.classList.add(ok ? 'right' : 'wrong');
@@ -368,7 +406,8 @@ function renderQuiz(step) {
   function finish(correct, given, selfGrade) {
     if (answered || !session) return;
     answered = true;
-    const res = session.submit(correct, performance.now() - t0, selfGrade);
+    const res = session.submit(correct, performance.now() - t0, selfGrade, step.hinted);
+    $('.hint-row', stage)?.replaceChildren();
     if (correct) scene?.heroAttack(battle.hit(res.combo));
     else {
       sfx('wrong');

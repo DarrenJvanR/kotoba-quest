@@ -47,11 +47,12 @@ function planMonsters(total) {
 }
 
 export class Battle {
-  constructor(totalHits) {
+  constructor(totalHits, { bonusHearts = 0 } = {}) {
     this.queue = planMonsters(totalHits);
     this.index = 0;
     this.hp = this.queue[0]?.hp || 0;
-    this.hearts = MAX_HEARTS;
+    this.maxHearts = MAX_HEARTS + bonusHearts;
+    this.hearts = this.maxHearts;
     this.kos = 0;
     this.coins = 0;
     this.crits = 0;
@@ -85,7 +86,7 @@ export class Battle {
     this.hearts -= 1;
     if (this.hearts > 0) return { ko: false };
     this.kos += 1;
-    this.hearts = MAX_HEARTS;
+    this.hearts = this.maxHearts;
     return { ko: true };
   }
 }
@@ -208,7 +209,7 @@ export class BattleScene {
   }
 
   renderHearts() {
-    this.q('.hearts').innerHTML = Array.from({ length: MAX_HEARTS }, (_, i) => heartSvg(i < this.battle.hearts)).join('');
+    this.q('.hearts').innerHTML = Array.from({ length: this.battle.maxHearts }, (_, i) => heartSvg(i < this.battle.hearts)).join('');
   }
 
   float(text, side, cls = '') {

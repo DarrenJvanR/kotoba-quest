@@ -40,9 +40,10 @@ export function isCorrect(item, input) {
 
 // Answer speed tells us how well it is known, so no self-rating buttons are needed
 // (except for your own mined sentences, which you grade yourself).
-export function gradeFor({ correct, ms, mode, isNew, item, selfGrade }) {
+export function gradeFor({ correct, ms, mode, isNew, item, selfGrade, hinted }) {
   if (selfGrade) return selfGrade;
   if (!correct) return Rating.Again;
+  if (hinted) return Rating.Hard;
   let g;
   if (mode === 'type' || mode === 'recall') {
     const easy = item.type === 'word' ? 4000 + 500 * item.units.length : 3000;
@@ -235,11 +236,11 @@ export class Session {
     return step;
   }
 
-  submit(correct, ms, selfGrade) {
+  submit(correct, ms, selfGrade, hinted = false) {
     const step = this.steps[this.i];
     const s = this.stats;
     if (step.first) {
-      store.recordReview(step.item.key, gradeFor({ correct, ms, mode: step.mode, isNew: step.isNew, item: step.item, selfGrade }), correct);
+      store.recordReview(step.item.key, gradeFor({ correct, ms, mode: step.mode, isNew: step.isNew, item: step.item, selfGrade, hinted }), correct);
       s.answered += 1;
       if (correct) s.correct += 1;
       if (step.isNew) s.learned.push(step.item);

@@ -29,6 +29,7 @@ function fresh() {
     town: { built: ['dojo'] },
     stories: {},
     arcade: { day: null, coins: 0, best: {} },
+    items: { charms: 0, hints: 0 },
     sentences: [],
     streak: { count: 0, last: null, freezes: FREEZES_PER_MONTH, month: monthKey() },
     history: {},
@@ -273,6 +274,40 @@ export function build(id, cost) {
   return true;
 }
 
+// ---- shop ----
+
+export const SHOP = [
+  { id: 'freeze', name: 'Streak freeze', emoji: '❄️', price: 60, max: 5, qty: 1, desc: 'Covers one missed day so your lantern stays lit. Bought freezes never expire.' },
+  { id: 'charm', name: 'Heart charm', emoji: '💗', price: 40, max: 3, qty: 1, desc: 'Your next battle starts with 7 hearts instead of 5. One is used at the start of each battle.' },
+  { id: 'hints', name: 'Hint scrolls', emoji: '💡', price: 30, max: 30, qty: 3, desc: 'Tap 💡 in a battle question to rule out two wrong answers or get the first letters. Hinted cards come back a little sooner.' },
+];
+
+const inventory = () => (state.items ||= { charms: 0, hints: 0 });
+
+export function owned(id) {
+  if (id === 'freeze') return state.streak.freezes;
+  return inventory()[id === 'charm' ? 'charms' : 'hints'] || 0;
+}
+
+export function buy(id) {
+  const item = SHOP.find((x) => x.id === id);
+  if (!item || state.coins < item.price || owned(id) + item.qty > item.max) return false;
+  state.coins -= item.price;
+  if (id === 'freeze') state.streak.freezes += item.qty;
+  else inventory()[id === 'charm' ? 'charms' : 'hints'] += item.qty;
+  save();
+  return true;
+}
+
+// Takes one charm or hint from the bag; false when there are none.
+export function useItem(kind) {
+  const bag = inventory();
+  if (!bag[kind]) return false;
+  bag[kind] -= 1;
+  save();
+  return true;
+}
+
 // Arcade coins are capped per day so games can't replace the daily quest.
 const ARCADE_DAILY_CAP = 30;
 
@@ -305,7 +340,8 @@ function refreshFreezes() {
   const m = monthKey();
   if (state.streak.month !== m) {
     state.streak.month = m;
-    state.streak.freezes = freezesPerMonth();
+    // Top up to the monthly allowance; freezes bought in the shop are kept.
+    state.streak.freezes = Math.max(state.streak.freezes, freezesPerMonth());
   }
 }
 

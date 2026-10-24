@@ -1,10 +1,10 @@
 // Offline support: app files are fetched fresh when online and served from cache when not.
-const CACHE = 'kotoba-quest-v11';
+const CACHE = 'kotoba-quest-v12';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/app.js', 'js/kana.js', 'js/vocab.js', 'js/phrases.js', 'js/kanji.js', 'js/stories.js', 'js/fsrs.js', 'js/store.js',
   'js/session.js', 'js/speech.js', 'js/sfx.js', 'js/battle.js', 'js/ui.js',
-  ...['home', 'study', 'library', 'settings', 'town', 'story', 'arcade', 'kanji', 'phrases', 'sentences', 'stats'].map((s) => `js/screens/${s}.js`),
+  ...['home', 'study', 'library', 'settings', 'town', 'shop', 'story', 'arcade', 'kanji', 'phrases', 'sentences', 'stats'].map((s) => `js/screens/${s}.js`),
   'icons/icon-192.png', 'icons/icon-512.png',
   ...['hero', 'tengu', 'witch', 'axolotl', 'dragonknight', 'lantern', 'battle-bg'].map((a) => `art/${a}.png`),
   ...['dojo', 'arcade', 'teahouse', 'garden', 'ramen', 'shrine', 'library', 'station', 'castle', 'lot'].map((b) => `art/town/${b}.png`),

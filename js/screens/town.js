@@ -70,13 +70,14 @@ function showTown() {
   view.innerHTML = `
     <section class="panel town-head">
       <div><span class="kana town-name">${name}</span> <span class="muted">${en}</span></div>
-      <div class="coins big">🪙 ${state.coins}</div>
+      <div class="town-actions"><div class="coins big">🪙 ${state.coins}</div><button class="btn small" id="shop">🛒 Shop</button></div>
     </section>
     <section class="town">
       ${BUILDINGS.map(tile).join('')}
     </section>
     <p class="muted center small-note">${next ? `Next: ${esc(next.en)} for 🪙 ${next.cost}. Win battles to earn coins.` : (BUILDINGS.some((b) => !store.hasBuilt(b.id)) ? 'The next buildings open as you learn more kana. 🔒 shows what each one needs.' : 'Your town is complete! おめでとう！')}</p>`;
   $$('.plot').forEach((p) => { p.onclick = () => openBuilding(p.dataset.b); });
+  $('#shop').onclick = () => go('shop');
 }
 screens.town = showTown;
 

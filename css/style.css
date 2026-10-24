@@ -571,6 +571,22 @@ body.in-session .word-kanji { font-size: 72px; }
 .pad-btn:active { transform: translateY(2px); background: var(--panel); }
 .pad-btn.nope { animation: shake .3s; box-shadow: inset 0 0 0 2px var(--wrong); }
 
+/* Shop and items */
+.town-actions { display: flex; align-items: center; gap: 10px; }
+.town-head .back { display: block; margin-bottom: 2px; }
+.shop-list { display: grid; gap: 10px; margin-bottom: 10px; }
+.shop-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; margin: 0; padding: 14px; }
+.shop-icon { font-size: 34px; text-align: center; }
+.shop-body b { font-weight: 800; font-size: 16px; }
+.shop-body p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
+.shop-have { font-size: 12px; color: var(--gold); }
+.shop-buy { white-space: nowrap; }
+.hint-row { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 0; margin-top: 10px; }
+.hint-row:empty { margin: 0; }
+.hint-btn b { color: var(--gold); margin-left: 4px; }
+.hint-text { color: var(--gold); font-family: var(--kana-font); font-size: 16px; }
+.choice.ruled-out { opacity: .2; filter: grayscale(1); }
+
 .quit-btn { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
 .dialog-msg { font-size: 17px; line-height: 1.5; margin: 6px 28px 14px 0; }
 .btn.danger-solid { background: var(--wrong); color: #fff; box-shadow: inset 0 -4px 0 0 #a83232; }
