@@ -106,6 +106,7 @@ function renderIntro(step) {
       <div class="row"><button class="btn primary grow" id="next">Got it →</button></div>`);
     $('#next').onclick = advance;
     $('#next').focus();
+    if (state.settings.autoplay && kanjiSay(it)) speak(kanjiSay(it));
     setKeys((e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advance(); }
     });
@@ -137,17 +138,36 @@ function renderIntro(step) {
   });
 }
 
+// Readings are written like おお-きい・ダイ: hiragana is the Japanese (kun) reading, with the
+// part after "-" spelled out in kana; katakana is the Chinese-origin (on) reading.
+const kanjiReadings = (k) => (k.readings ? k.readings.split('・').filter(Boolean) : []);
+const sayable = (reading) => reading.replace(/-/g, '');
+
+// What to say aloud for a kanji: its first example word, or else its first reading.
+export const kanjiSay = (k) => k.words[0]?.kana || sayable(kanjiReadings(k)[0] || '');
+
 export function kanjiCard(k, footer = '', isNew = true) {
   const parts = k.parts.map((p) => KANJI_BY_CHAR[p]).filter(Boolean);
+  const voice = hasVoice();
+  const readings = kanjiReadings(k).map((r) => {
+    const on = /[゠-ヿ]/.test(r);
+    const title = on ? 'Chinese-origin reading (on)' : 'Japanese reading (kun)';
+    return voice
+      ? `<button class="reading-chip kana ${on ? 'on' : 'kun'}" data-say="${esc(sayable(r))}" title="${title}">🔊 ${esc(r)}</button>`
+      : `<span class="reading-chip kana ${on ? 'on' : 'kun'}" title="${title}">${esc(r)}</span>`;
+  }).join('');
+  const word = (w) => (voice
+    ? `<button class="kword" data-say="${esc(w.kana)}"><b class="kana">${esc(w.kanji)}</b> <span class="kana">${esc(w.kana)}</span> · ${esc(w.meaning)} <span class="say-icon">🔊</span></button>`
+    : `<span class="kword"><b class="kana">${esc(w.kanji)}</b> <span class="kana">${esc(w.kana)}</span> · ${esc(w.meaning)}</span>`);
   return `
     <div class="card intro pop">
       <div class="tag">${k.radical ? 'Building block' : isNew ? 'New kanji' : 'Kanji'}</div>
       <div class="glyph kanji">${k.char}</div>
       <div class="meaning big">${esc(k.meaning)}</div>
-      ${k.readings ? `<div class="readings kana">${esc(k.readings)}</div>` : ''}
+      ${readings ? `<div class="readings">${readings}</div><div class="readings-hint">hiragana: Japanese reading · katakana: Chinese-origin reading</div>` : ''}
       ${parts.length ? `<div class="parts">Built from ${parts.map((p) => `<span class="part"><b class="kana">${p.char}</b> ${esc(p.meaning)}</span>`).join(' + ')}</div>` : ''}
       <p class="mnemonic">${esc(state.notes[k.key] || k.mnemonic)}</p>
-      ${k.words.length ? `<div class="kwords">${k.words.slice(0, 4).map((w) => `<span class="kword"><b class="kana">${esc(w.kanji)}</b> <span class="kana">${esc(w.kana)}</span> · ${esc(w.meaning)}</span>`).join('')}</div>` : ''}
+      ${k.words.length ? `<div class="kwords">${k.words.slice(0, 4).map(word).join('')}</div>` : ''}
       ${footer}
     </div>`;
 }
@@ -359,7 +379,7 @@ function renderQuiz(step) {
     const input = $('#ans');
     if (input) input.readOnly = true;
     const card = stage.querySelector('.card');
-    const spoken = step.mode === 'kread' ? step.readWord.kana : it.type === 'kanji' ? '' : it.kana;
+    const spoken = step.mode === 'kread' ? step.readWord.kana : it.type === 'kanji' ? kanjiSay(it) : it.kana;
     if (spoken && it.type !== 'sentence' && (state.settings.autoplay || !correct)) speak(spoken);
     let answerLine;
     if (step.mode === 'kread') answerLine = `<b class="kana">${esc(step.readWord.kanji)}</b> <span class="kana">${esc(step.readWord.kana)}</span> · ${esc(step.readWord.meaning)}`;

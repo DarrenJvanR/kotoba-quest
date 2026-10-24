@@ -607,7 +607,16 @@ body.kb-open .top { display: none; }
 
 /* ---- kanji ---- */
 
-.readings { color: var(--muted); font-size: 16px; letter-spacing: 1px; }
+.readings { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 6px 0 2px; }
+.reading-chip { font: inherit; font-family: var(--kana-font); font-size: 17px; color: var(--ink); background: var(--bg); border: 0; padding: 5px 12px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--border); }
+button.reading-chip { cursor: pointer; }
+button.reading-chip:hover { box-shadow: inset 0 0 0 1px var(--gold); }
+.reading-chip.on { color: var(--blue); }
+.readings-hint { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.kword { font: inherit; font-family: var(--kana-font); font-size: 14px; color: var(--ink); text-align: left; background: none; border: 0; padding: 4px 0; }
+button.kword { cursor: pointer; }
+button.kword:hover .kana { color: var(--gold); }
+.say-icon { font-size: 12px; opacity: .7; }
 .parts { margin: 10px 0 4px; font-size: 14px; color: var(--muted); }
 .part { display: inline-block; color: var(--ink); background: var(--bg); padding: 2px 8px; clip-path: var(--px-corners); }
 .part b { font-weight: normal; font-size: 18px; }
