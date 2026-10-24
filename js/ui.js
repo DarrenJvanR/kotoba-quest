@@ -73,6 +73,34 @@ export function openModal(html, { onClose } = {}) {
   return { el: $('.sheet', modal), close };
 }
 
+// In-app replacements for confirm() and alert(), which some browsers and home-screen
+// apps silently block (confirm() then always answers "cancel").
+export function confirmDialog(message, { ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
+  return new Promise((resolve) => {
+    let answered = false;
+    const { el, close } = openModal(`
+      <p class="dialog-msg">${esc(message)}</p>
+      <div class="row">
+        <button class="btn ghost grow" id="dlgNo">${esc(cancel)}</button>
+        <button class="btn ${danger ? 'danger-solid' : 'primary'} grow" id="dlgYes">${esc(ok)}</button>
+      </div>`, { onClose: () => { if (!answered) resolve(false); } });
+    const done = (value) => {
+      answered = true;
+      resolve(value);
+      close();
+    };
+    $('#dlgYes', el).onclick = () => done(true);
+    $('#dlgNo', el).onclick = () => done(false);
+    $('#dlgNo', el).focus();
+  });
+}
+
+export function notify(message) {
+  const { el, close } = openModal(`<p class="dialog-msg">${esc(message)}</p><button class="btn primary big" id="dlgOk">OK</button>`);
+  $('#dlgOk', el).onclick = close;
+  $('#dlgOk', el).focus();
+}
+
 export function closeModal() {
   modal.hidden = true;
   modal.innerHTML = '';

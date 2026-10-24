@@ -48,7 +48,7 @@ function gameFrame(title) {
   setScreen('arcade-play', { tab: 'town', session: true });
   view.innerHTML = `
     <div class="session-top">
-      <button class="icon-btn" id="quit" aria-label="Leave game">✕</button>
+      <button class="btn small ghost quit-btn" id="quit">✕ Leave</button>
       <div class="game-title">${title}</div>
       <div class="combo" id="score"></div>
     </div>

@@ -8,7 +8,7 @@ import { wordTip } from '../vocab.js';
 import { KANJI_BY_CHAR } from '../kanji.js';
 import { speak, hasVoice } from '../speech.js';
 import { sfx } from '../sfx.js';
-import { view, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips } from '../ui.js';
+import { view, modal, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips, confirmDialog } from '../ui.js';
 
 let session = null;
 let battle = null;
@@ -25,7 +25,7 @@ function startSession() {
   battle = new Battle(s.questionCount);
   view.innerHTML = `
     <div class="session-top">
-      <button class="icon-btn" id="quit" aria-label="Leave session">✕</button>
+      <button class="btn small ghost quit-btn" id="quit">✕ Leave</button>
       <div class="bar"><i style="width:0%"></i></div>
       <div class="combo"></div>
     </div>
@@ -38,10 +38,21 @@ function startSession() {
     scene = null;
     session = null;
   });
-  $('#quit').onclick = () => { if (confirm('Leave this session? Your answers and coins so far are saved.')) go('home'); };
+  $('#quit').onclick = askLeave;
   renderStep();
 }
 screens.study = startSession;
+
+async function askLeave() {
+  if (!session || !modal.hidden) return;
+  const leave = await confirmDialog('Leave this battle? Your answers and coins so far are saved, and you can pick up the rest later.', { ok: 'Leave battle', cancel: 'Keep fighting' });
+  if (leave) go('home');
+}
+
+// Escape also offers to leave (when no dialog is already open).
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && session && modal.hidden) askLeave();
+});
 
 function setCombo(n) {
   const el = $('.combo');

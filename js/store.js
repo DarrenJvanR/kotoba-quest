@@ -202,10 +202,27 @@ export function readyPhraseCount() {
   return PHRASES.filter((p) => !state.cards[p.key] && phraseUnlocked(p)).length;
 }
 
+// Kanji lessons open with the library in town, or straight away with "Skip ahead".
+export const kanjiOpen = () => hasBuilt('library') || !!state.settings.kanjiEarly;
+
+// "I already know these": cards start strong and come back for a light check over the
+// next few weeks, spread out so they don't all land on one day.
+export function markKnown(items) {
+  const day = today();
+  let n = 0;
+  for (const it of items) {
+    if ((state.cards[it.key]?.s || 0) >= 7) continue;
+    state.cards[it.key] = { s: 20, d: 4, last: day, due: day + 5 + (n % 25), reps: 1, lapses: 0, skipped: true };
+    n += 1;
+  }
+  save();
+  return n;
+}
+
 // Kanji to teach next (library must be built). A kanji waits until its parts are known
 // or are being taught earlier in the same session.
 export function nextNewKanji() {
-  if (!hasBuilt('library')) return [];
+  if (!kanjiOpen()) return [];
   const log = newTodayLog();
   const picked = KANJI.filter((k) => log.kanji.includes(k.key) && !state.cards[k.key]);
   let budget = state.settings.kanjiPerDay - log.kanji.length;

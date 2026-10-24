@@ -2,8 +2,9 @@
 import * as store from '../store.js';
 import { state } from '../store.js';
 import { hasVoice, voiceName } from '../speech.js';
+import { ITEMS } from '../kana.js';
 import { sfx } from '../sfx.js';
-import { view, $, esc, setScreen, screens, go } from '../ui.js';
+import { view, $, esc, setScreen, screens, go, confirmDialog, notify } from '../ui.js';
 
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -19,6 +20,7 @@ function showSettings() {
   setScreen('settings');
   const s = state.settings;
   const seg = (id, options, current) => `<div class="seg" id="${id}">${options.map(([v, label]) => `<button data-v="${v}" class="${String(current) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+  const known = (script) => ITEMS.filter((it) => it.script === script && (state.cards[it.key]?.s || 0) >= 7).length;
   const toggle = (id, title, sub) => `<label class="setting"><div><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div><input type="checkbox" class="toggle" id="${id}" ${s[id] ? 'checked' : ''}></label>`;
 
   view.innerHTML = `
@@ -27,7 +29,16 @@ function showSettings() {
       <div class="setting"><div><b>New kana rows per day</b><span>A row is 3 to 12 kana</span></div>${seg('rowsPerDay', [[0, '0'], [1, '1'], [2, '2'], [3, '3']], s.rowsPerDay)}</div>
       <div class="setting"><div><b>New words per day</b><span>Only words you can already read</span></div>${seg('wordsPerDay', [[0, '0'], [5, '5'], [10, '10'], [15, '15']], s.wordsPerDay)}</div>
       <div class="setting"><div><b>New phrases per day</b><span>Everyday sentences, by situation</span></div>${seg('phrasesPerDay', [[0, '0'], [2, '2'], [3, '3'], [5, '5']], s.phrasesPerDay)}</div>
-      <div class="setting"><div><b>New kanji per day</b><span>Unlocks with the library in town</span></div>${seg('kanjiPerDay', [[0, '0'], [2, '2'], [3, '3'], [5, '5']], s.kanjiPerDay)}</div>
+      <div class="setting"><div><b>New kanji per day</b><span>Unlocks with the library in town, or skip ahead below</span></div>${seg('kanjiPerDay', [[0, '0'], [2, '2'], [3, '3'], [5, '5']], s.kanjiPerDay)}</div>
+    </section>
+    <section class="panel">
+      <h2>Skip ahead</h2>
+      <p class="muted">Already know some Japanese? Skip what you know. Skipped kana still come back now and then for a quick check.</p>
+      <div class="setting"><div><b>I already know hiragana</b><span>${known('hira')} of 104 known</span></div>${known('hira') >= 104 ? '<span class="done-tag">✓ Done</span>' : '<button class="btn small" id="skipHira">Skip</button>'}</div>
+      <div class="setting"><div><b>I already know katakana</b><span>${known('kata')} of 104 known</span></div>${known('kata') >= 104 ? '<span class="done-tag">✓ Done</span>' : '<button class="btn small" id="skipKata">Skip</button>'}</div>
+      <label class="setting"><div><b>Start kanji now</b><span>Without building the library in town first</span></div><input type="checkbox" class="toggle" id="kanjiEarly" ${s.kanjiEarly ? 'checked' : ''}></label>
+      <button class="btn wide-btn" id="kanjiOnly">Just kanji, please</button>
+      <p class="hint">“Just kanji” skips both kana sets, starts kanji now, and sets new kana, words and phrases to 0 a day, so each day's quest is only kanji. You can change any of these back above.</p>
     </section>
     <section class="panel">
       <h2>Sound and look</h2>
@@ -49,7 +60,29 @@ function showSettings() {
       ${installPrompt ? '<button class="btn primary big" id="install">Install as an app</button>' : ''}
       <button class="btn danger" id="reset">Reset all progress</button>
     </section>
-    <p class="foot muted">Reviews are scheduled with FSRS, the memory model Anki uses. A new day starts at 4am. Battle sprites come from your bestiary.</p>`;
+    <p class="foot muted">Reviews are scheduled with FSRS, the memory model Anki uses. A new day starts at 4am. Art made locally with the Anima model.</p>`;
+
+  const skip = async (script, label) => {
+    const items = ITEMS.filter((it) => it.script === script);
+    if (!await confirmDialog(`Mark all ${items.length} ${label} as known? They'll come back for a light check over the next few weeks.`, { ok: 'Skip them' })) return;
+    const n = store.markKnown(items);
+    showSettings();
+    notify(`${n} ${label} marked as known. Words and phrases that use them are now open.`);
+  };
+  $('#skipHira')?.addEventListener('click', () => skip('hira', 'hiragana'));
+  $('#skipKata')?.addEventListener('click', () => skip('kata', 'katakana'));
+  $('#kanjiEarly').onchange = (e) => {
+    s.kanjiEarly = e.target.checked;
+    store.save();
+  };
+  $('#kanjiOnly').onclick = async () => {
+    if (!await confirmDialog('Skip all hiragana and katakana, start kanji now, and turn off new kana, words and phrases?', { ok: 'Just kanji' })) return;
+    store.markKnown(ITEMS);
+    Object.assign(s, { kanjiEarly: true, rowsPerDay: 0, wordsPerDay: 0, phrasesPerDay: 0, kanjiPerDay: Math.max(s.kanjiPerDay, 3) });
+    store.save();
+    showSettings();
+    notify(`Done. Each day's quest now teaches ${s.kanjiPerDay} new kanji, starting with their building blocks.`);
+  };
 
   view.querySelectorAll('.seg[id]').forEach((el) => el.addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -83,12 +116,16 @@ function showSettings() {
     try {
       const data = JSON.parse(await file.text());
       if (!data || typeof data.cards !== 'object') throw new Error('not a backup');
-      if (!confirm('Replace your current progress with this backup?')) return;
+      const cards = Object.keys(data.cards).length;
+      if (!await confirmDialog(`Replace your current progress with this backup (${cards} cards, ${data.streak?.count || 0}-day streak)?`, { ok: 'Replace' })) return;
       store.replaceState(data);
       applyFont();
       showSettings();
+      notify('Backup imported. Welcome back!');
     } catch {
-      alert("That file doesn't look like a Kotoba Quest backup.");
+      notify("That file doesn't look like a Kotoba Quest backup.");
+    } finally {
+      e.target.value = '';
     }
   };
   $('#install')?.addEventListener('click', async () => {
@@ -97,8 +134,8 @@ function showSettings() {
     installPrompt = null;
     showSettings();
   });
-  $('#reset').onclick = () => {
-    if (!confirm('Erase all progress, streak, coins and town? This cannot be undone.')) return;
+  $('#reset').onclick = async () => {
+    if (!await confirmDialog('Erase all progress, streak, coins and town? This cannot be undone.', { ok: 'Erase everything', danger: true })) return;
     store.resetState();
     applyFont();
     go('home');

@@ -2,7 +2,7 @@
 import * as store from '../store.js';
 import { state } from '../store.js';
 import { WORDS } from '../vocab.js';
-import { $, $$, esc, plural, openModal } from '../ui.js';
+import { $, $$, esc, plural, openModal, confirmDialog } from '../ui.js';
 import { libraryTabs, cardFacts } from './library.js';
 
 // Underline words from the deck you already know, to show how much you can read.
@@ -60,8 +60,8 @@ function sentencesTab(el) {
         ${cardFacts(`s:${s.id}`)}
         <p class="muted center small-note">Highlighted words are ones you already know.</p>
         <button class="btn danger" id="del">Delete sentence</button>`, { onClose: () => sentencesTab(el) });
-      $('#del', sheet).onclick = () => {
-        if (!confirm('Delete this sentence and its review history?')) return;
+      $('#del', sheet).onclick = async () => {
+        if (!await confirmDialog('Delete this sentence and its review history?', { ok: 'Delete', danger: true })) return;
         store.deleteSentence(s.id);
         close();
       };

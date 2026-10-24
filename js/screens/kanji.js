@@ -7,13 +7,13 @@ import { libraryTabs, cardFacts, levelBadge, levelLegend } from './library.js';
 import { kanjiCard } from './study.js';
 
 function kanjiTab(el) {
-  const built = store.hasBuilt('library');
+  const built = store.kanjiOpen();
   const seen = KANJI.filter((k) => state.cards[k.key]).length;
   el.innerHTML = `
     ${levelLegend()}
     ${built
     ? `<p class="muted">${seen} of ${KANJI.length} learned · ${state.settings.kanjiPerDay} new a day in your quest (change it in Settings).</p>`
-    : '<p class="hint">Build the 📚 Library in town to start kanji lessons. You can browse them here already.</p>'}
+    : '<p class="hint">Build the 📚 Library in town to start kanji lessons, or start them now from Settings → Skip ahead. You can browse them here already.</p>'}
     <div class="grid c5 kanji-grid">${KANJI.map((k) => `
       <button class="cell lv-${store.cardLevel(k.key)} ${k.radical ? 'radical' : ''}" data-k="${k.key}">
         <span class="kanji">${k.char}</span><small>${esc(k.meaning.split(',')[0])}</small>
@@ -46,7 +46,7 @@ screens.kanji = () => go('library', 'kanji');
 const prevProgress = screens.homeProgress;
 screens.homeProgress = () => {
   const html = prevProgress?.() || '';
-  if (!store.hasBuilt('library')) return html;
+  if (!store.kanjiOpen()) return html;
   const seen = KANJI.filter((k) => state.cards[k.key]).length;
   const known = KANJI.filter((k) => ['known', 'mastered'].includes(store.cardLevel(k.key))).length;
   return `${html}

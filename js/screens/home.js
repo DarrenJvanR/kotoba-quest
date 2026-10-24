@@ -59,7 +59,7 @@ function showHome() {
         <div><b>${newKana.length}</b><span>new kana</span></div>
         <div><b>${newWords.length}</b><span>new words</span></div>
         <div><b>${newPhrases.length}</b><span>new phrases</span></div>
-        ${store.hasBuilt('library') ? `<div><b>${newKanji.length}</b><span>new kanji</span></div>` : ''}
+        ${store.kanjiOpen() ? `<div><b>${newKanji.length}</b><span>new kanji</span></div>` : ''}
       </div>
       ${newCount ? chips([...newKana, ...newWords, ...newKanji].map((it) => it.kana)) : ''}
       ${newPhrases.length ? `<div class="phrase-preview">${newPhrases.map((p) => `<div><span class="kana">${esc(p.jp)}</span> <span class="muted">${esc(p.en)}</span></div>`).join('')}</div>` : ''}

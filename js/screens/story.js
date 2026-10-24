@@ -41,7 +41,7 @@ function playStory(id) {
   let i = 0;
   view.innerHTML = `
     <div class="session-top">
-      <button class="icon-btn" id="quit" aria-label="Leave story">✕</button>
+      <button class="btn small ghost quit-btn" id="quit">✕ Leave</button>
       <div class="bar"><i style="width:0%"></i></div>
       <div class="combo"></div>
     </div>
