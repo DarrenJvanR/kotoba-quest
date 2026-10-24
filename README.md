@@ -10,6 +10,8 @@ A daily Japanese trainer wrapped in a small pixel RPG. Kana, words and kanji are
 | 2 | 299 starter words that unlock only once you can read every kana in them; the battle (kitsune hero vs. tengu, yamanba and axolotl, with a dragon-knight boss); chiptune sound effects; text-to-speech |
 | 3 | The town: 9 buildings bought with coins. The arcade has three mini-games (Kana Rain, Memory Match, Word Builder), and 8 kana-only story scenes unlock with buildings |
 | Phrases | 160 everyday phrases in 10 situations (greetings, meeting people, getting by, shopping, eating out, travel, plans, feelings, daily life, emergencies), with meaning, say-it, build-it, fill-the-gap and listening practice; they unlock once you can read their kana |
+| Travel | The station sells train tickets (coins plus a learning goal). Kyoto has 6 places with stories, 56 souvenir words, 18 phrases, its own yokai (kappa, karakasa-obake, oni boss) and battle background. A stamp book collects a stamp per place, with a coin reward per full page |
+| Shop | Streak freezes, heart charms (7-heart battles) and hint scrolls |
 | 4 | 90 kanji taught through their building blocks (unlocked by the library); sentence mining (save your own lines, grade yourself); a stats page with charts |
 
 **Battle rules:** each correct answer is one hit. Total monster HP equals the session's question count, so the last right answer always defeats the last monster. Misses cost hearts. At zero hearts the lantern revives you, but you lose the 3-star rating.
@@ -32,7 +34,8 @@ Then open http://localhost:8125. To use it on a phone, host the folder anywhere 
 
 | File | What it does |
 |---|---|
-| `js/kana.js`, `js/vocab.js`, `js/kanji.js`, `js/stories.js` | Content: kana, words, kanji (with parts), story scenes |
+| `js/kana.js`, `js/vocab.js`, `js/phrases.js`, `js/kanji.js`, `js/stories.js` | Content: kana, words (incl. souvenir words per town), phrases, kanji (with parts), story scenes |
+| `js/regions.js` | Towns: buildings, monsters, battle backgrounds, ticket requirements |
 | `js/fsrs.js` | Spaced repetition scheduler |
 | `js/store.js` | Saved progress: cards, daily limits, streak, coins, town, arcade, sentences |
 | `js/session.js` | Builds a session, picks question types and wrong options, grades answers |

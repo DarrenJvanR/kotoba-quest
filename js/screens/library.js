@@ -77,7 +77,7 @@ function openKana(kana, refresh) {
 
 function wordsTab(el) {
   const seen = WORDS.filter((w) => state.cards[w.key]);
-  const ready = WORDS.filter((w) => !state.cards[w.key] && isUnlocked(w, state.cards));
+  const ready = WORDS.filter((w) => !state.cards[w.key] && store.regionOpen(w) && isUnlocked(w, state.cards));
   const locked = WORDS.length - seen.length - ready.length;
   const row = (w) => {
     const level = store.cardLevel(w.key);

@@ -5,7 +5,7 @@ import { STORIES, CAST, unknownKana, storyText } from '../stories.js';
 import { speak } from '../speech.js';
 import { sfx } from '../sfx.js';
 import { view, $, $$, esc, plural, setKeys, setScreen, screens, go, renderHud, audioBtn } from '../ui.js';
-import { BUILDINGS } from './town.js';
+import { BUILDINGS, buildingArt } from '../regions.js';
 
 const REWARD = 15;
 
@@ -16,7 +16,7 @@ function showStories(buildingId) {
   view.innerHTML = `
     <section class="panel">
       <button class="icon-btn back" id="back">← Town</button>
-      <h2>${b.emoji} <span class="kana">${esc(b.jp)}</span> <span class="muted">${esc(b.en)}</span></h2>
+      <h2 class="story-place"><img src="${buildingArt(b)}" alt=""> <span class="kana">${esc(b.jp)}</span> <span class="muted">${esc(b.en)}</span></h2>
       <div class="story-list">
         ${list.map((s) => {
     const missing = unknownKana(storyText(s), state.cards);

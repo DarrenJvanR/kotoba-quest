@@ -14,6 +14,7 @@ export const SITUATIONS = {
   feel: { name: 'Feelings', emoji: '💬' },
   daily: { name: 'Daily life', emoji: '🏠' },
   sos: { name: 'Emergencies and health', emoji: '🚑' },
+  kyoto: { name: 'Kyoto trip', emoji: '🏯', region: 'kyoto' },
 };
 
 const DECK = {
@@ -197,6 +198,27 @@ const DECK = {
     ['x11', 'あぶない', 'Watch out!', 'Literally "dangerous!"', 'any'],
     ['x12', 'だいじょうぶですか', 'Are you okay?', '', 'polite'],
   ],
+  // Unlocks once you travel to Kyoto.
+  kyoto: [
+    ['k1', 'きょうとは はじめてです', 'This is my first time in Kyoto', '', 'polite'],
+    ['k2', 'ここは なんの おてらですか', 'What temple is this?', 'なんの means "what kind of".', 'polite'],
+    ['k3', 'にゅうじょうりょうは いくらですか', 'How much is the entrance fee?', '', 'polite'],
+    ['k4', 'しゃしんを とって もらえますか', 'Could you take a photo for me?', '〜て もらえますか asks someone to do something for you.', 'polite'],
+    ['k5', 'いっしょに しゃしんを とりましょう', "Let's take a photo together", '', 'polite'],
+    ['k6', 'くつを ぬいで ください', 'Please take off your shoes', 'You hear this at temples, inns and homes. Look for the step up.', 'polite'],
+    ['k7', 'きものを きて みたいです', "I'd like to try wearing a kimono", '〜て みたい means "want to try ~".', 'polite'],
+    ['k8', 'まっちゃを ひとつ ください', 'One matcha, please', '', 'polite'],
+    ['k9', 'おすすめの おみやげは なんですか', 'What souvenir do you recommend?', '', 'polite'],
+    ['k10', 'よやくを して います', 'I have a reservation', '', 'polite'],
+    ['k11', 'チェックインを おねがいします', 'Check-in, please', '', 'polite'],
+    ['k12', 'おんせんは なんじまでですか', 'Until what time is the hot spring open?', 'まで means "until".', 'polite'],
+    ['k13', 'ごゆっくり どうぞ', 'Please take your time (staff)', 'Staff say this when serving you or showing you to your room.', 'polite'],
+    ['k14', 'すごく きれいですね', "It's really beautiful, isn't it?", '', 'polite'],
+    ['k15', 'にほんの れきしが すきです', 'I like Japanese history', '', 'polite'],
+    ['k16', 'えきまで どのくらい かかりますか', 'How long does it take to the station?', '', 'polite'],
+    ['k17', 'おまもりを ひとつ ください', 'One good-luck charm, please', '', 'polite'],
+    ['k18', 'ここは しずかで いいですね', "It's nice and quiet here", '〜で links descriptions: しずかで いい = "quiet and nice".', 'polite'],
+  ],
 };
 
 const PUNCT = /[、。！？…]/g;
@@ -222,6 +244,7 @@ export const PHRASES = Object.entries(DECK).flatMap(([situation, rows]) => rows.
     type: 'phrase',
     kana: jp.replace(/ /g, ''), // spoken and shown as one line
     jp, en, note, register, situation, chunks,
+    region: SITUATIONS[situation].region || null,
     romaji: override || chunks.map(chunkRomaji).filter(Boolean).join(' '),
   };
 }));

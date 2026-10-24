@@ -20,6 +20,9 @@ const CAST = {
   witch: { img: 'art/witch.png', faces: 'left', height: 148 },
   axolotl: { img: 'art/axolotl.png', faces: 'left', height: 112 },
   dragonknight: { img: 'art/dragonknight.png', faces: 'left', height: 165 },
+  kappa: { img: 'art/kyoto/kappa.png', faces: 'left', height: 120 },
+  karakasa: { img: 'art/kyoto/karakasa.png', faces: 'left', height: 130 },
+  oni: { img: 'art/kyoto/oni.png', faces: 'left', height: 165 },
 };
 
 export const MONSTERS = {
@@ -27,28 +30,33 @@ export const MONSTERS = {
   tengu: { name: 'てんぐ', romaji: 'tengu', coins: 10 },
   witch: { name: 'やまんば', romaji: 'yamanba', coins: 10 },
   dragonknight: { name: 'りゅうきし', romaji: 'ryūkishi', coins: 30, boss: true },
+  kappa: { name: 'かっぱ', romaji: 'kappa', coins: 10 },
+  karakasa: { name: 'からかさおばけ', romaji: 'karakasa obake', coins: 10 },
+  oni: { name: 'おに', romaji: 'oni', coins: 35, boss: true },
 };
 
 // ---- rules ----
 
-function planMonsters(total) {
+// Monsters come from the town you're in; the boss closes out longer battles.
+function planMonsters(total, region) {
   const list = [];
   let rest = total;
   const boss = total >= 14;
   if (boss) rest -= 6;
-  const order = shuffle(['axolotl', 'tengu', 'witch']);
+  const order = shuffle(region.monsters);
   for (let i = 0; rest > 0; i++) {
     const hp = rest <= 6 ? rest : 4;
     list.push({ id: order[i % order.length], hp });
     rest -= hp;
   }
-  if (boss) list.push({ id: 'dragonknight', hp: 6 });
+  if (boss) list.push({ id: region.boss, hp: 6 });
   return list.map((m) => ({ ...MONSTERS[m.id], ...m, maxHp: m.hp }));
 }
 
 export class Battle {
   constructor(totalHits, { bonusHearts = 0 } = {}) {
-    this.queue = planMonsters(totalHits);
+    this.region = store.currentRegion();
+    this.queue = planMonsters(totalHits, this.region);
     this.index = 0;
     this.hp = this.queue[0]?.hp || 0;
     this.maxHearts = MAX_HEARTS + bonusHearts;
@@ -160,7 +168,7 @@ export class BattleScene {
   constructor(container, battle) {
     this.battle = battle;
     container.innerHTML = `
-      <div class="stage">
+      <div class="stage" style="background-image: url(${battle.region.bg})">
         <div class="hud-hero"><div class="hearts"></div></div>
         <div class="hud-foe"><div class="foe-name"><span class="kana"></span><small></small></div><div class="hp"><i></i></div></div>
         <div class="slot hero-slot"></div>

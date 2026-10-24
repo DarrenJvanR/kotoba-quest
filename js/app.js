@@ -10,6 +10,7 @@ import './screens/town.js';
 import './screens/story.js';
 import './screens/arcade.js';
 import './screens/shop.js';
+import './screens/travel.js';
 import './screens/kanji.js';
 import './screens/phrases.js';
 import './screens/sentences.js';

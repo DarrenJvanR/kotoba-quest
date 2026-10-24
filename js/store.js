@@ -1,5 +1,6 @@
 // Saved progress: cards, XP, streak, daily history and settings, kept in localStorage.
-import { GROUPS } from './kana.js';
+import { GROUPS, ITEMS } from './kana.js';
+import { REGIONS } from './regions.js';
 import { WORDS, isUnlocked } from './vocab.js';
 import { KANJI } from './kanji.js';
 import { PHRASES } from './phrases.js';
@@ -27,6 +28,7 @@ function fresh() {
     bestCombo: 0,
     defeated: {},
     town: { built: ['dojo'] },
+    travel: { current: 'home', visited: ['home'], claimed: {} },
     stories: {},
     arcade: { day: null, coins: 0, best: {} },
     items: { charms: 0, hints: 0 },
@@ -34,7 +36,7 @@ function fresh() {
     streak: { count: 0, last: null, freezes: FREEZES_PER_MONTH, month: monthKey() },
     history: {},
     newToday: { day: null, groups: [], words: [], bonus: 0, bonusWords: 0 },
-    settings: { rowsPerDay: 1, wordsPerDay: 5, phrasesPerDay: 3, kanjiPerDay: 3, autoplay: true, listening: true, sfx: true, kanaFont: 'gothic' },
+    settings: { rowsPerDay: 1, wordsPerDay: 5, souvenirsPerDay: 3, phrasesPerDay: 3, kanjiPerDay: 3, autoplay: true, listening: true, sfx: true, kanaFont: 'gothic' },
   };
 }
 
@@ -148,14 +150,32 @@ export function upcomingGroup() {
 
 const WORDS_PER_BONUS = 5;
 
-// Words to teach next: unseen words you can already read, in deck order.
+// Souvenir words and phrases of the town you're in come first, so arriving in Kyoto feels like it.
+function hereFirst(list) {
+  const here = state.travel?.current;
+  if (!here || here === 'home') return list;
+  return [...list.filter((x) => x.region === here), ...list.filter((x) => x.region !== here)];
+}
+
+// Words to teach next: unseen words you can already read, in deck order. While visiting a
+// town, its souvenir words have their own daily allowance on top of the usual words.
 export function nextNewWords() {
   const log = newTodayLog();
+  const here = state.travel?.current || 'home';
   const picked = WORDS.filter((w) => log.words.includes(w.key) && !state.cards[w.key]);
-  let budget = state.settings.wordsPerDay + log.bonusWords * WORDS_PER_BONUS - log.words.length;
+  const fresh = (w) => !state.cards[w.key] && !log.words.includes(w.key) && regionOpen(w) && isUnlocked(w, state.cards);
+  const startedHere = log.words.filter((k) => WORDS.find((w) => w.key === k)?.region === here).length;
+  let souvenirs = here === 'home' ? 0 : (state.settings.souvenirsPerDay ?? 3) - startedHere;
   for (const w of WORDS) {
+    if (souvenirs <= 0) break;
+    if (w.region !== here || !fresh(w)) continue;
+    picked.push(w);
+    souvenirs -= 1;
+  }
+  let budget = state.settings.wordsPerDay + log.bonusWords * WORDS_PER_BONUS - (log.words.length - startedHere);
+  for (const w of hereFirst(WORDS)) {
     if (budget <= 0) break;
-    if (state.cards[w.key] || log.words.includes(w.key) || !isUnlocked(w, state.cards)) continue;
+    if (!fresh(w) || picked.includes(w)) continue;
     picked.push(w);
     budget -= 1;
   }
@@ -174,17 +194,17 @@ export function addBonusWords() {
 }
 
 export function readyWordCount() {
-  return WORDS.filter((w) => !state.cards[w.key] && isUnlocked(w, state.cards)).length;
+  return WORDS.filter((w) => !state.cards[w.key] && regionOpen(w) && isUnlocked(w, state.cards)).length;
 }
 
 // Phrases unlock like words: once every kana in them has been learned.
-export const phraseUnlocked = (p) => unknownKana(p.jp, state.cards).length === 0;
+export const phraseUnlocked = (p) => regionOpen(p) && unknownKana(p.jp, state.cards).length === 0;
 
 export function nextNewPhrases() {
   const log = newTodayLog();
   const picked = PHRASES.filter((p) => log.phrases.includes(p.key) && !state.cards[p.key]);
   let budget = state.settings.phrasesPerDay - log.phrases.length;
-  for (const p of PHRASES) {
+  for (const p of hereFirst(PHRASES)) {
     if (budget <= 0) break;
     if (state.cards[p.key] || log.phrases.includes(p.key) || !phraseUnlocked(p)) continue;
     picked.push(p);
@@ -270,6 +290,52 @@ export function build(id, cost) {
   state.coins -= cost;
   state.town.built.push(id);
   if (id === 'shrine') state.streak.freezes += 1;
+  save();
+  return true;
+}
+
+// ---- travel ----
+
+const travel = () => (state.travel ||= { current: 'home', visited: ['home'], claimed: {} });
+
+// Souvenir words and phrases only open once you've been to their town.
+export const regionOpen = (item) => !item.region || travel().visited.includes(item.region);
+export const currentRegion = () => REGIONS[travel().current] || REGIONS.home;
+export const hasVisited = (id) => travel().visited.includes(id);
+
+// What a ticket still needs: a list of { label, have, need } goals, plus whether coins suffice.
+export function ticketStatus(id) {
+  const r = REGIONS[id];
+  const goals = [];
+  if (r.requires?.hira) goals.push({ label: 'hiragana learned', have: ITEMS.filter((it) => it.script === 'hira' && state.cards[it.key]).length, need: r.requires.hira });
+  if (r.requires?.kata) goals.push({ label: 'katakana learned', have: ITEMS.filter((it) => it.script === 'kata' && state.cards[it.key]).length, need: r.requires.kata });
+  if (r.requires?.words) goals.push({ label: 'words learned', have: WORDS.filter((w) => !w.region && state.cards[w.key]).length, need: r.requires.words });
+  if (r.requires?.kanji) goals.push({ label: 'kanji learned', have: KANJI.filter((k) => state.cards[k.key]).length, need: r.requires.kanji });
+  return { goals, ready: goals.every((g) => g.have >= g.need), afford: state.coins >= (r.ticket || 0), visited: hasVisited(id) };
+}
+
+export function buyTicket(id) {
+  const r = REGIONS[id];
+  const st = ticketStatus(id);
+  if (st.visited || !st.ready || !st.afford) return false;
+  state.coins -= r.ticket;
+  travel().visited.push(id);
+  travel().current = id;
+  save();
+  return true;
+}
+
+export function travelTo(id) {
+  if (!hasVisited(id)) return false;
+  travel().current = id;
+  save();
+  return true;
+}
+
+export function claimBook(id, coins) {
+  if (travel().claimed[id]) return false;
+  travel().claimed[id] = today();
+  state.coins += coins;
   save();
   return true;
 }

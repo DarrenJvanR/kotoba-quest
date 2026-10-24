@@ -11,6 +11,10 @@ export const CAST = {
   miko: { name: 'みこ', emoji: '👘' },
   staff: { name: 'えきいん', emoji: '🧑‍✈️' },
   tanuki: { name: 'タヌキ', emoji: '🦝' },
+  guide: { name: 'ガイドさん', emoji: '🙋‍♀️' },
+  master: { name: 'おちゃの せんせい', emoji: '🧘' },
+  clerk: { name: 'てんいん', emoji: '💁‍♀️' },
+  okami: { name: 'おかみさん', emoji: '👩‍🦳' },
 };
 
 export const STORIES = [
@@ -118,6 +122,86 @@ export const STORIES = [
     ],
     notes: ['Friends talk casually: だった instead of でした, and よ for "you know".'],
     question: { q: 'What souvenir did you bring?', options: ['sweets', 'a book', 'tea'], answer: 0 },
+  },
+
+  // ---- Kyoto ----
+  {
+    id: 'kyoto-kinkakuji', building: 'kinkakuji', title: 'きんいろの おてら', en: 'The golden temple',
+    lines: [
+      ['guide', 'ここが きんかくじです。', 'This is Kinkaku-ji.'],
+      ['me', 'わあ、きんいろですね！', "Wow, it's gold!"],
+      ['guide', 'やく ろっぴゃくねん まえに できました。', 'It was first built about 600 years ago.'],
+      ['me', 'いけに うつって いて、きれいですね。', "It's reflected in the pond. So beautiful."],
+      ['guide', 'しゃしんを とりましょうか。', 'Shall I take a photo for you?'],
+      ['me', 'はい、おねがいします！', 'Yes, please!'],
+    ],
+    notes: ['ここが points something out: "this (right here) is".', '〜ましょうか offers to do something: "shall I ~?"'],
+    question: { q: 'What colour is the temple?', options: ['gold', 'red', 'white'], answer: 0 },
+  },
+  {
+    id: 'kyoto-tea', building: 'tearoom', title: 'おちゃの じかん', en: 'Tea time',
+    lines: [
+      ['master', 'どうぞ、おはいり ください。', 'Please, come in.'],
+      ['me', 'しつれいします。', 'Excuse me (for coming in).'],
+      ['master', 'まず、わがしを どうぞ。', 'First, please have a sweet.'],
+      ['me', 'いただきます。あまくて おいしい！', 'Thank you. Sweet and delicious!'],
+      ['master', 'つぎは まっちゃです。ちゃわんを まわして のんで ください。', 'Next is matcha. Turn the bowl, then drink.'],
+      ['me', 'けっこうな おてまえでした。', 'That was a fine bowl of tea.'],
+    ],
+    notes: ['しつれいします is said when you enter a room. Literally "I am being rude".', 'けっこうな おてまえでした is the traditional thanks at the end of a tea ceremony.'],
+    question: { q: 'What do you have before the matcha?', options: ['a sweet', 'rice', 'fruit'], answer: 0 },
+  },
+  {
+    id: 'kyoto-kimono', building: 'kimono', title: 'きものを きて みたい', en: 'Trying on a kimono',
+    lines: [
+      ['clerk', 'いらっしゃいませ。きものの レンタルですか。', 'Welcome. Are you here to rent a kimono?'],
+      ['me', 'はい。きものを きて みたいです。', "Yes. I'd like to try wearing one."],
+      ['clerk', 'どの いろが いいですか。', 'Which colour would you like?'],
+      ['me', 'あかい きものが いいです。', "A red kimono, please."],
+      ['clerk', 'おびは きいろに しましょう。とても にあいますよ！', "Let's make the obi yellow. It really suits you!"],
+      ['me', 'ありがとう ございます！', 'Thank you very much!'],
+    ],
+    notes: ['X が いいです means "X would be good", a polite way to choose.', '〜に しましょう means "let\'s go with ~".'],
+    question: { q: 'What colour kimono do you choose?', options: ['blue', 'red', 'black'], answer: 1 },
+  },
+  {
+    id: 'kyoto-bamboo', building: 'bamboo', title: 'たけの みち', en: 'The bamboo path',
+    lines: [
+      ['tanuki', 'たけが たくさん！ たかいね。', 'So much bamboo! It\'s so tall.'],
+      ['me', 'かぜの おとが きれいだね。', 'The sound of the wind is lovely.'],
+      ['tanuki', 'ゆっくり さんぽしよう。', "Let's take a slow walk."],
+      ['me', 'うん。しずかで いいね。', "Yeah. It's nice and quiet."],
+      ['tanuki', 'あ、あそこに ちいさい はしが あるよ。', "Oh, there's a little bridge over there."],
+      ['me', 'いって みよう！', "Let's go and see!"],
+    ],
+    notes: ['〜よう is the casual "let\'s ~": さんぽしよう, いって みよう.', 'ね at the end shares a feeling: "isn\'t it?"'],
+    question: { q: 'What sound does Kitsune like?', options: ['the birds', 'the wind', 'the rain'], answer: 1 },
+  },
+  {
+    id: 'kyoto-inari', building: 'inari', title: 'いちまんの とりい', en: 'Ten thousand torii',
+    lines: [
+      ['me', 'とりいが いっぱい！ なんぼん ありますか。', 'So many torii! How many are there?'],
+      ['miko', 'やく いちまんぼん あります。', 'About ten thousand.'],
+      ['me', 'きつねの ぞうも ありますね。', 'There are fox statues too.'],
+      ['miko', 'きつねは かみさまの つかいです。', "Foxes are the god's messengers."],
+      ['me', 'わたしも きつねです！', "I'm a fox too!"],
+      ['miko', 'ふふ。では、おまもりを どうぞ。', 'Hehe. Then please take a good-luck charm.'],
+    ],
+    notes: ['ほん (ぼん, ぽん) counts long, thin things: torii, pens, bottles.'],
+    question: { q: 'What are the foxes at the shrine?', options: ["the god's messengers", 'guards of the city', 'pets of the priests'], answer: 0 },
+  },
+  {
+    id: 'kyoto-ryokan', building: 'ryokan', title: 'りょかんに とまる', en: 'A night at the inn',
+    lines: [
+      ['okami', 'ようこそ いらっしゃいました。', 'Welcome to our inn.'],
+      ['me', 'よやくを して いる キツネです。', "I'm Kitsune. I have a reservation."],
+      ['okami', 'おまちして おりました。くつを ぬいで ください。', 'We have been expecting you. Please take off your shoes.'],
+      ['okami', 'おへやは たたみです。ゆうしょくは しちじです。', 'Your room has tatami. Dinner is at seven.'],
+      ['me', 'おんせんは なんじまでですか。', 'Until what time is the hot spring open?'],
+      ['okami', 'よるの じゅういちじまでです。ごゆっくり どうぞ。', 'Until eleven at night. Please take your time.'],
+    ],
+    notes: ['おまちして おりました is a very polite "we were waiting for you".', 'A whole phrase can describe a noun: よやくを して いる キツネ = "Kitsune, who has a reservation".'],
+    question: { q: 'What time is dinner?', options: ['six', 'seven', 'eleven'], answer: 1 },
   },
 ];
 

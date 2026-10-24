@@ -34,6 +34,7 @@ function phrasesTab(el) {
         ${phraseCard(p, `<div class="center">${audioBtn(p.kana)}</div>`, false)}
         ${levelBadge(p.key)}
         ${cardFacts(p.key)}
+        ${!store.regionOpen(p) ? `<p class="hint">🚃 Opens when you travel to ${esc(p.region[0].toUpperCase() + p.region.slice(1))}.</p>` : ''}
         ${missing.length ? `<p class="hint">Opens once you've learned <span class="kana">${missing.join(' ')}</span>.</p>` : ''}`, { onClose: () => phrasesTab(el) });
     };
   });

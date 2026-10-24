@@ -571,6 +571,28 @@ body.in-session .word-kanji { font-size: 72px; }
 .pad-btn:active { transform: translateY(2px); background: var(--panel); }
 .pad-btn.nope { animation: shake .3s; box-shadow: inset 0 0 0 2px var(--wrong); }
 
+/* Travel and stamp book */
+.town-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; }
+.town-buttons .btn { flex: 1; }
+.story-place { display: flex; align-items: center; gap: 8px; }
+.story-place img { width: 44px; height: 44px; object-fit: contain; }
+.trip.here { box-shadow: inset 0 0 0 3px var(--gold), inset 0 -6px 0 3px #0003; }
+.trip-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.trip-name { font-size: 26px; color: var(--gold); }
+.goal { position: relative; margin-top: 8px; padding: 6px 10px; font-size: 13px; background: var(--bg); overflow: hidden; clip-path: var(--px-corners); }
+.goal span { position: relative; z-index: 1; }
+.goal i { position: absolute; left: 0; top: 0; bottom: 0; background: #5470c855; }
+.goal.met { color: var(--gold); }
+.goal.met i { background: #f2c94c33; }
+.stamps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
+.stamp { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 50%; border: 3px solid #d2423a; color: #e0554c; background: #fff4e8; transform: rotate(-6deg); box-shadow: inset 0 0 0 4px #fff4e8, inset 0 0 0 6px #d2423a55; }
+.stamp:nth-child(2n) { transform: rotate(5deg); }
+.stamp-ink { font-size: 22px; font-weight: 700; line-height: 1.1; text-align: center; padding: 0 6px; word-break: keep-all; }
+.stamp small { font-size: 11px; font-family: var(--kana-font); }
+.stamp.empty { border: 2px dashed var(--border); background: var(--bg); color: var(--muted); transform: none; box-shadow: none; }
+.stamp.empty img { width: 52%; opacity: .35; filter: grayscale(1); }
+.stamp.empty small { text-align: center; padding: 0 6px; }
+
 /* Shop and items */
 .town-actions { display: flex; align-items: center; gap: 10px; }
 .town-head .back { display: block; margin-bottom: 2px; }

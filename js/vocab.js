@@ -337,6 +337,68 @@ const DECK = {
   ],
 };
 
+// Souvenir words: they join your daily quest once you travel to their town.
+const REGION_DECKS = {
+  kyoto: [
+    ['きょうと', '京都', 'Kyoto', '🏯'],
+    ['きもの', '着物', 'kimono', '👘'],
+    ['ゆかた', '浴衣', 'yukata (summer kimono)', '👘'],
+    ['おび', '帯', 'obi (kimono sash)', '🎀'],
+    ['げた', '下駄', 'geta (wooden sandals)', '🩴'],
+    ['せんす', '扇子', 'folding fan', '🪭'],
+    ['ちょうちん', '提灯', 'paper lantern', '🏮'],
+    ['とりい', '鳥居', 'torii (shrine gate)', '⛩️'],
+    ['かみさま', '神様', 'god, deity', '✨'],
+    ['ほとけ', '仏', 'Buddha', '🙏'],
+    ['おまいり', 'お参り', 'visit to a shrine or temple', '🙏'],
+    ['さいせん', '賽銭', 'offering money', '🪙'],
+    ['おまもり', 'お守り', 'good-luck charm', '🧧'],
+    ['おみくじ', '', 'fortune slip', '📜'],
+    ['ねがい', '願い', 'wish', '🌠'],
+    ['いのる', '祈る', 'to pray', '🙏'],
+    ['かね', '鐘', 'temple bell', '🔔'],
+    ['いなり', '稲荷', 'Inari (rice god; foxes are its messengers)', '🦊'],
+    ['たけ', '竹', 'bamboo', '🎋'],
+    ['こけ', '苔', 'moss', '🌿'],
+    ['はし', '橋', 'bridge', '🌉'],
+    ['さくら', '桜', 'cherry blossom', '🌸'],
+    ['もみじ', '紅葉', 'autumn leaves, maple', '🍁'],
+    ['はなみ', '花見', 'cherry-blossom viewing', '🌸'],
+    ['きせつ', '季節', 'season', '🗓️'],
+    ['まっちゃ', '抹茶', 'matcha (powdered green tea)', '🍵'],
+    ['わがし', '和菓子', 'traditional Japanese sweets', '🍡'],
+    ['ちゃわん', '茶碗', 'tea bowl', '🍵'],
+    ['きつねうどん', '', 'udon with fried tofu', '🍜'],
+    ['りょかん', '旅館', 'traditional inn (ryokan)', '🏯'],
+    ['おんせん', '温泉', 'hot spring', '♨️'],
+    ['ふとん', '布団', 'futon', '🛏️'],
+    ['たたみ', '畳', 'tatami mat', '🟫'],
+    ['しょうじ', '障子', 'shoji (paper sliding door)', '🚪'],
+    ['ざぶとん', '座布団', 'floor cushion', '🟪'],
+    ['ゆうしょく', '夕食', 'dinner', '🍱'],
+    ['ちょうしょく', '朝食', 'breakfast', '🍳'],
+    ['かんこう', '観光', 'sightseeing', '📸'],
+    ['かんこうきゃく', '観光客', 'tourist', '🧳'],
+    ['ちず', '地図', 'map', '🗺️'],
+    ['あんない', '案内', 'guidance; showing around', '💁'],
+    ['おみやげ', 'お土産', 'souvenir', '🎁'],
+    ['れきし', '歴史', 'history', '📜'],
+    ['むかし', '昔', 'long ago, the old days', '⏳'],
+    ['しろ', '城', 'castle', '🏯'],
+    ['まいこ', '舞妓', 'maiko (apprentice geisha)', '💃'],
+    ['おどり', '踊り', 'dance', '💃'],
+    ['きんいろ', '金色', 'gold (colour)', '🟨'],
+    ['ぎんいろ', '銀色', 'silver (colour)', '⬜'],
+    ['さんぽ', '散歩', 'walk, stroll', '🚶'],
+    ['のぼる', '登る', 'to climb', '🧗'],
+    ['ちかい', '近い', 'near, close', '📍'],
+    ['とおい', '遠い', 'far', '🔭'],
+    ['うつくしい', '美しい', 'beautiful', '✨'],
+    ['にぎやか', '賑やか', 'lively, bustling', '🎉'],
+    ['ゆっくり', '', 'slowly; take your time', '🐢'],
+  ],
+};
+
 const SMALL_Y = 'ゃゅょャュョ';
 const SOKUON = 'っッ';
 const LONG = 'ー';
@@ -380,18 +442,23 @@ export function loose(s) {
 
 const toHira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
-export const WORDS = Object.entries(DECK).flatMap(([theme, rows]) => rows.map(([kana, kanji, meaning, emoji, override]) => {
+const makeWord = (theme, region) => ([kana, kanji, meaning, emoji, override]) => {
   const romaji = override || romajiOf(kana);
   return {
     key: `w:${kana}${kanji ? `:${kanji}` : ''}`,
     type: 'word',
-    kana, kanji, meaning, emoji, theme, romaji,
+    kana, kanji, meaning, emoji, theme, romaji, region,
     script: /[゠-ヿ]/.test(kana) ? 'kata' : 'hira',
     units: units(kana).filter((u) => !SOKUON.includes(u) && u !== LONG),
     sokuon: [...kana].some((c) => SOKUON.includes(c)),
     long: kana.includes(LONG),
   };
-}));
+};
+
+export const WORDS = [
+  ...Object.entries(DECK).flatMap(([theme, rows]) => rows.map(makeWord(theme, null))),
+  ...Object.entries(REGION_DECKS).flatMap(([region, rows]) => rows.map(makeWord(`${region[0].toUpperCase()}${region.slice(1)} souvenirs`, region))),
+];
 export const WORD_BY_KEY = Object.fromEntries(WORDS.map((w) => [w.key, w]));
 
 export function isWordCorrect(word, input) {
