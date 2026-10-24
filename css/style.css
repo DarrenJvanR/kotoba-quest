@@ -286,6 +286,10 @@ p { margin: 8px 0; }
 .setting b { font-weight: normal; display: block; }
 .setting span { font-size: 13px; color: var(--muted); }
 .setting .seg span { color: inherit; font-size: inherit; }
+/* A setting with a longer note and more options: text on top, buttons full width below. */
+.setting.setting-wide { flex-direction: column; align-items: stretch; }
+.setting.setting-wide .seg { display: flex; }
+.setting.setting-wide .seg button { flex: 1; padding: 8px 4px; }
 .hint { font-size: 13px; color: var(--muted); background: var(--bg); padding: 10px 12px; clip-path: var(--px-corners); }
 .foot { font-size: 12px; text-align: center; padding: 0 12px; }
 
