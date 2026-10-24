@@ -1,0 +1,376 @@
+// The daily session: intros and quizzes on the bottom, the battle on top, then a summary.
+import * as store from '../store.js';
+import { state } from '../store.js';
+import { Session, isCorrect, itemFor } from '../session.js';
+import { Battle, BattleScene } from '../battle.js';
+import { wordTip } from '../vocab.js';
+import { KANJI_BY_CHAR } from '../kanji.js';
+import { speak, hasVoice } from '../speech.js';
+import { sfx } from '../sfx.js';
+import { view, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips } from '../ui.js';
+
+let session = null;
+let battle = null;
+let scene = null;
+
+export const mnemonicFor = (it) => state.notes[it.key] || it.mnemonic;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function startSession() {
+  const s = new Session({ voice: hasVoice });
+  if (s.done) return go('home');
+  setScreen('session', { tab: 'home', session: true });
+  session = s;
+  battle = new Battle(s.questionCount);
+  view.innerHTML = `
+    <div class="session-top">
+      <button class="icon-btn" id="quit" aria-label="Leave session">✕</button>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="combo"></div>
+    </div>
+    <div id="battle"></div>
+    <div id="stage"></div>`;
+  scene = new BattleScene($('#battle'), battle);
+  scene.start();
+  onLeave(() => {
+    scene?.destroy();
+    scene = null;
+    session = null;
+  });
+  $('#quit').onclick = () => { if (confirm('Leave this session? Your answers and coins so far are saved.')) go('home'); };
+  renderStep();
+}
+screens.study = startSession;
+
+function setCombo(n) {
+  const el = $('.combo');
+  if (!el) return;
+  el.textContent = n >= 2 ? `🔥 ${n}` : '';
+  el.classList.toggle('hot', n >= 5);
+}
+
+function renderStep() {
+  if (!session) return;
+  const step = session.current();
+  if (!step) return finishSession();
+  setKeys(null);
+  $('.session-top .bar i').style.width = `${session.progress * 100}%`;
+  setCombo(session.stats.combo);
+  if (step.type === 'intro') renderIntro(step);
+  else renderQuiz(step);
+}
+
+function advance() {
+  if (!session) return;
+  session.next();
+  renderStep();
+}
+
+// ---- intros ----
+
+function renderIntro(step) {
+  const it = step.item;
+  const isWord = it.type === 'word';
+  const prev = session.steps[session.i - 1];
+  if (!prev || prev.type !== 'intro') {
+    scene?.say(isWord ? 'New words to learn!' : 'A new kana!');
+    sfx('learn');
+  }
+  const tip = isWord ? wordTip(it) : '';
+  if (it.type === 'kanji') {
+    if (!prev || prev.type !== 'intro') scene?.say(it.radical ? 'A kanji building block!' : 'New kanji!');
+    $('#stage').innerHTML = kanjiCard(it, `
+      <div class="row"><button class="btn primary grow" id="next">Got it →</button></div>`);
+    $('#next').onclick = advance;
+    $('#next').focus();
+    setKeys((e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advance(); }
+    });
+    return;
+  }
+  $('#stage').innerHTML = isWord ? `
+    <div class="card intro pop">
+      <div class="tag">New word · ${esc(it.theme)}</div>
+      <div class="emoji">${it.emoji}</div>
+      <div class="word kana">${esc(it.kana)}</div>
+      <div class="romaji">${esc(it.romaji)}</div>
+      <div class="meaning">${esc(it.meaning)}</div>
+      ${it.kanji ? `<div class="kanji-note">In kanji: <span class="kana">${esc(it.kanji)}</span></div>` : ''}
+      ${tip ? `<p class="mnemonic">${esc(tip)}</p>` : ''}
+      <div class="row">${audioBtn(it.kana)}<button class="btn primary grow" id="next">Got it →</button></div>
+    </div>` : `
+    <div class="card intro pop">
+      <div class="tag">New kana · <span class="kana">${step.group.name}</span></div>
+      <div class="glyph kana">${it.kana}</div>
+      <div class="romaji">${it.romaji}</div>
+      <p class="mnemonic">${esc(mnemonicFor(it))}</p>
+      <div class="row">${audioBtn(it.kana)}<button class="btn primary grow" id="next">Got it →</button></div>
+    </div>`;
+  $('#next').onclick = advance;
+  $('#next').focus();
+  if (state.settings.autoplay) speak(it.kana);
+  setKeys((e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advance(); }
+  });
+}
+
+export function kanjiCard(k, footer = '', isNew = true) {
+  const parts = k.parts.map((p) => KANJI_BY_CHAR[p]).filter(Boolean);
+  return `
+    <div class="card intro pop">
+      <div class="tag">${k.radical ? 'Building block' : isNew ? 'New kanji' : 'Kanji'}</div>
+      <div class="glyph kanji">${k.char}</div>
+      <div class="meaning big">${esc(k.meaning)}</div>
+      ${k.readings ? `<div class="readings kana">${esc(k.readings)}</div>` : ''}
+      ${parts.length ? `<div class="parts">Built from ${parts.map((p) => `<span class="part"><b class="kana">${p.char}</b> ${esc(p.meaning)}</span>`).join(' + ')}</div>` : ''}
+      <p class="mnemonic">${esc(state.notes[k.key] || k.mnemonic)}</p>
+      ${k.words.length ? `<div class="kwords">${k.words.slice(0, 4).map((w) => `<span class="kword"><b class="kana">${esc(w.kanji)}</b> <span class="kana">${esc(w.kana)}</span> · ${esc(w.meaning)}</span>`).join('')}</div>` : ''}
+      ${footer}
+    </div>`;
+}
+
+// ---- quizzes ----
+
+const PROMPTS = {
+  kmeaning: (it) => (it.radical ? 'What does this building block mean?' : 'What does this kanji mean?'),
+  kchar: () => 'Which kanji means this?',
+  kread: () => 'How is this word read?',
+  sentence: () => 'Do you understand this sentence?',
+  type: () => 'What sound is this?',
+  pick: () => 'Which kana makes this sound?',
+  listen: (it) => (it.type === 'word' ? 'What does this word mean?' : 'Which kana do you hear?'),
+  meaning: () => 'What does this mean?',
+  reverse: () => 'Which word means this?',
+  recall: () => 'How do you say this in Japanese?',
+};
+
+function promptHtml(step) {
+  const it = step.item;
+  const p = `<div class="prompt">${PROMPTS[step.mode](it)}</div>`;
+  switch (step.mode) {
+    case 'type': return `${p}<div class="glyph kana">${it.kana}</div>`;
+    case 'pick': return `${p}<div class="romaji big">${it.romaji}</div>${audioBtn(it.kana)}`;
+    case 'listen': return `${p}<button class="btn listen" data-say="${esc(it.kana)}">🔊 Play again</button>`;
+    case 'meaning': return `${p}<div class="word kana">${esc(it.kana)}</div>`;
+    case 'reverse':
+    case 'recall': return `${p}<div class="emoji">${it.emoji}</div><div class="meaning big">${esc(it.meaning)}</div>`;
+    case 'kmeaning': return `${p}<div class="glyph kanji">${it.char}</div>`;
+    case 'kchar': return `${p}<div class="meaning big">${esc(it.meaning)}</div>`;
+    case 'kread': return `${p}<div class="word kanji">${esc(step.readWord.kanji)}</div><div class="muted">meaning: ${esc(step.readWord.meaning)}</div>`;
+    default: return p;
+  }
+}
+
+function choiceLabel(step, c) {
+  if (c.type === 'kanji') return step.mode === 'kchar' ? `<span class="kanji">${c.char}</span>` : `<span>${esc(c.meaning)}</span>`;
+  if (step.mode === 'kread') return `<span class="kana">${esc(c.kana)}</span>`;
+  if (c.type === 'kana') return `<span class="kana">${c.kana}</span>`;
+  if (step.mode === 'reverse') return `<span class="kana">${esc(c.kana)}</span>`;
+  return `<span>${esc(c.meaning)}</span>`;
+}
+
+function renderQuiz(step) {
+  const it = step.item;
+  const stage = $('#stage');
+  const t0 = performance.now();
+  const typed = step.mode === 'type' || step.mode === 'recall';
+  const answerKey = step.mode === 'kread' ? step.readWord.key : it.key;
+  let answered = false;
+
+  if (step.mode === 'sentence') {
+    stage.innerHTML = `
+      <div class="card quiz">
+        <div class="prompt">${PROMPTS.sentence()}</div>
+        <div class="sentence kana">${esc(it.jp)}</div>
+        ${audioBtn(it.jp)}
+        <div id="reveal"><button class="btn primary big" id="show">Show meaning</button></div>
+        <div id="fb"></div>
+      </div>`;
+    if (state.settings.autoplay) speak(it.jp);
+    const show = () => {
+      $('#reveal').innerHTML = `
+        <div class="meaning">${esc(it.en || '(no translation saved)')}</div>
+        ${it.note ? `<p class="mnemonic">${esc(it.note)}</p>` : ''}
+        <div class="grades">
+          <button class="btn" data-g="1"><small>1</small> Forgot</button>
+          <button class="btn" data-g="2"><small>2</small> Hard</button>
+          <button class="btn primary" data-g="3"><small>3</small> Got it</button>
+        </div>`;
+      $$('.grades .btn').forEach((b) => { b.onclick = () => selfGrade(Number(b.dataset.g)); });
+      setKeys((e) => { if (['1', '2', '3'].includes(e.key)) selfGrade(Number(e.key)); });
+    };
+    const selfGrade = (g) => {
+      if (answered) return;
+      $$('.grades .btn').forEach((b) => { b.disabled = true; });
+      finishSelf(g);
+    };
+    $('#show').onclick = show;
+    $('#show').focus();
+    setKeys((e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); } });
+  } else if (typed) {
+    const placeholder = step.mode === 'recall' ? 'type it in romaji or kana' : 'type it in romaji';
+    stage.innerHTML = `
+      <div class="card quiz">
+        ${promptHtml(step)}
+        <form id="f" autocomplete="off">
+          <input id="ans" class="answer" placeholder="${placeholder}" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
+          <div class="row"><button type="button" class="btn ghost" id="idk">Not sure</button><button class="btn primary grow">Check</button></div>
+        </form>
+        <div id="fb"></div>
+      </div>`;
+    const input = $('#ans');
+    input.focus();
+    // Kana answers are short enough to accept the moment they're right.
+    if (it.type === 'kana') input.addEventListener('input', () => { if (isCorrect(it, input.value)) finish(true); });
+    $('#f').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value.trim()) finish(isCorrect(it, input.value), input.value.trim());
+    });
+    $('#idk').onclick = () => finish(false);
+  } else {
+    const textual = ['meaning', 'listen', 'kmeaning'].includes(step.mode) && it.type !== 'kana';
+    const wordGrid = ['reverse', 'kread'].includes(step.mode);
+    stage.innerHTML = `
+      <div class="card quiz">
+        ${promptHtml(step)}
+        <div class="choices ${textual ? 'list' : ''} ${wordGrid ? 'words' : ''}">
+          ${step.choices.map((c, i) => `<button class="choice" data-k="${esc(c.key)}"><small>${i + 1}</small>${choiceLabel(step, c)}</button>`).join('')}
+        </div>
+        <div id="fb"></div>
+      </div>`;
+    const buttons = $$('.choice', stage);
+    buttons.forEach((b) => { b.onclick = () => choose(b); });
+    if (step.mode === 'listen') speak(it.kana);
+    setKeys((e) => {
+      const n = Number(e.key);
+      if (n >= 1 && n <= buttons.length) choose(buttons[n - 1]);
+    });
+  }
+
+  function choose(btn) {
+    if (answered) return;
+    const ok = btn.dataset.k === answerKey;
+    $$('.choice', stage).forEach((b) => { b.disabled = true; });
+    btn.classList.add(ok ? 'right' : 'wrong');
+    stage.querySelector(`.choice[data-k="${CSS.escape(answerKey)}"]`).classList.add('right');
+    const picked = itemFor(btn.dataset.k);
+    finish(ok, ok ? null : picked);
+  }
+
+  // Mined sentences: "Forgot" counts as a miss, anything else as a hit.
+  function finishSelf(grade) {
+    finish(grade > 1, null, grade);
+  }
+
+  function finish(correct, given, selfGrade) {
+    if (answered || !session) return;
+    answered = true;
+    const res = session.submit(correct, performance.now() - t0, selfGrade);
+    if (correct) scene?.heroAttack(battle.hit(res.combo));
+    else {
+      sfx('wrong');
+      scene?.monsterAttack(battle.hurt());
+    }
+    renderHud();
+    setCombo(res.combo);
+    const input = $('#ans');
+    if (input) input.readOnly = true;
+    const card = stage.querySelector('.card');
+    const spoken = step.mode === 'kread' ? step.readWord.kana : it.type === 'kanji' ? '' : it.kana;
+    if (spoken && it.type !== 'sentence' && (state.settings.autoplay || !correct)) speak(spoken);
+    let answerLine;
+    if (step.mode === 'kread') answerLine = `<b class="kana">${esc(step.readWord.kanji)}</b> <span class="kana">${esc(step.readWord.kana)}</span> · ${esc(step.readWord.meaning)}`;
+    else if (it.type === 'kanji') answerLine = `<b class="kana">${it.char}</b> ${esc(it.meaning)} <span class="kana muted">${esc(it.readings)}</span>`;
+    else if (it.type === 'sentence') answerLine = correct ? 'Nice! It\'ll come back later.' : 'It\'ll come back again soon.';
+    else if (it.type === 'word') answerLine = `<b class="kana">${esc(it.kana)}</b> <span>${esc(it.romaji)}</span> · ${esc(it.meaning)}`;
+    else answerLine = `<b class="kana">${it.kana}</b> = ${it.romaji}`;
+
+    if (correct) {
+      card.classList.add('flash-right');
+      $('#fb').innerHTML = `<div class="fb right"><span>${answerLine}</span><span class="xp">+${res.gained} XP</span></div>`;
+      const t = setTimeout(advance, it.type === 'word' ? 1300 : 900);
+      setKeys((e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(t); advance(); } });
+      return;
+    }
+    card.classList.add('shake');
+    let note = '';
+    if (typeof given === 'string') note = `<div class="muted">You typed “${esc(given)}”</div>`;
+    else if (given) note = `<div class="muted">You picked ${given.type === 'word' ? `${esc(given.kana)} (${esc(given.meaning)})` : given.type === 'kanji' ? `${given.char} (${esc(given.meaning)})` : `“${esc(given.romaji)}”`}</div>`;
+    let help;
+    if (it.type === 'word') help = `${it.emoji} ${esc(wordTip(it) || (it.kanji ? `Kanji: ${it.kanji}` : ''))}`;
+    else if (it.type === 'sentence') help = esc(it.en || '');
+    else help = esc(mnemonicFor(it));
+    $('#fb').innerHTML = `
+      <div class="fb wrong">
+        <div>${answerLine}</div>
+        ${note}
+        ${help.trim() ? `<p class="mnemonic">${help}</p>` : ''}
+        <button class="btn primary" id="cont">Continue</button>
+      </div>`;
+    $('#cont').onclick = advance;
+    $('#cont').focus();
+    setKeys((e) => { if (e.key === 'Enter') { e.preventDefault(); advance(); } });
+  }
+}
+
+// ---- summary ----
+
+function starsFor(acc, kos) {
+  if (!kos && acc >= 90) return 3;
+  if (!kos || acc >= 75) return 2;
+  return 1;
+}
+
+async function finishSession() {
+  const s = session.stats;
+  const b = battle;
+  setKeys(null);
+  $('#stage').innerHTML = '';
+  await scene?.queue;
+  await wait(b.won ? 900 : 200);
+  if (!session) return;
+
+  const before = store.streakStatus();
+  const allDone = store.dueCards().length === 0;
+  const streak = allDone ? store.lightStreak() : before;
+  const newlyLit = allDone && !before.litToday;
+  const acc = s.answered ? Math.round((s.correct / s.answered) * 100) : 100;
+  const stars = starsFor(acc, b.kos);
+  const bonus = stars * 5;
+  state.coins += bonus;
+  store.save();
+  setScreen('summary', { tab: 'home' });
+
+  const tomorrow = store.dueOn(store.today() + 1);
+  const upcoming = store.upcomingGroup();
+  const more = !upcoming && store.readyWordCount() > 0;
+  const defeated = b.defeated.map((m) => `<span class="chip kana">${esc(m.name)}</span>`).join('');
+
+  view.innerHTML = `
+    <section class="panel summary">
+      <div class="hero-lantern ${streak.litToday ? 'lit' : ''} ${newlyLit ? 'ignite' : ''}">${lantern(streak.litToday, 7)}</div>
+      <h2>${newlyLit ? `Day ${streak.count}! Lantern lit.` : 'Session complete!'}</h2>
+      ${streak.usedFreezes ? `<p class="muted center">Used ${plural(streak.usedFreezes, 'streak freeze')} to cover missed days.</p>` : ''}
+      <div class="stars" aria-label="${stars} of 3 stars">${'★'.repeat(stars)}<span>${'★'.repeat(3 - stars)}</span></div>
+      <div class="stats3">
+        <div><b>${acc}%</b><span>accuracy</span></div>
+        <div><b>+${s.xp}</b><span>XP</span></div>
+        <div><b>${s.bestCombo}</b><span>best combo</span></div>
+      </div>
+      <div class="loot">
+        <div><b>🪙 +${b.coins + bonus}</b><span>${b.coins} from monsters, ${bonus} star bonus</span></div>
+        ${b.kos ? `<div class="muted">Knocked out ${plural(b.kos, 'time')}, revived by the lantern.</div>` : ''}
+      </div>
+      ${defeated ? `<h3>Defeated</h3><div class="chips">${defeated}</div>` : ''}
+      ${s.learned.length ? `<h3>Learned today</h3>${chips(s.learned.map((it) => it.kana))}` : ''}
+      <p class="muted center">Tomorrow: ${plural(tomorrow, 'review')}.</p>
+      <button class="btn primary big" id="home">Back home</button>
+      ${upcoming ? `<button class="btn ghost" id="extra">Learn another row: <span class="kana">${upcoming.name}</span></button>` : ''}
+      ${more ? '<button class="btn ghost" id="extraWords">Learn 5 more words</button>' : ''}
+    </section>`;
+  $('#home').onclick = () => go('home');
+  $('#home').focus();
+  $('#extra')?.addEventListener('click', () => { store.addBonusRow(); startSession(); });
+  $('#extraWords')?.addEventListener('click', () => { store.addBonusWords(); startSession(); });
+  setKeys((e) => { if (e.key === 'Enter') { e.preventDefault(); go('home'); } });
+}
