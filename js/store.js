@@ -36,7 +36,7 @@ function fresh() {
     streak: { count: 0, last: null, freezes: FREEZES_PER_MONTH, month: monthKey() },
     history: {},
     newToday: { day: null, groups: [], words: [], bonus: 0, bonusWords: 0 },
-    settings: { rowsPerDay: 1, wordsPerDay: 5, souvenirsPerDay: 3, phrasesPerDay: 3, kanjiPerDay: 3, autoplay: true, listening: true, sfx: true, kanaFont: 'gothic' },
+    settings: { rowsPerDay: 1, wordsPerDay: 5, souvenirsPerDay: 3, phrasesPerDay: 3, kanjiPerDay: 3, autoplay: true, speechRate: 'normal', listening: true, sfx: true, kanaFont: 'gothic' },
   };
 }
 

@@ -44,6 +44,7 @@ function showSettings() {
     <section class="panel">
       <h2>Sound and look</h2>
       ${toggle('autoplay', 'Read words aloud automatically')}
+      <div class="setting"><div><b>Speaking speed</b><span>🐢 next to any 🔊 always plays extra slowly</span></div>${seg('speechRate', [['normal', 'Normal'], ['slow', 'Slow'], ['slower', 'Very slow']], s.speechRate)}</div>
       ${toggle('listening', 'Listening questions', 'Hear it and pick the answer')}
       ${toggle('sfx', 'Battle sound effects')}
       <div class="setting"><div><b>Kana font</b></div>${seg('kanaFont', [['gothic', '<span class="kana-gothic">あ</span> Print'], ['hand', '<span class="kana-hand">あ</span> Handwritten']], s.kanaFont)}</div>

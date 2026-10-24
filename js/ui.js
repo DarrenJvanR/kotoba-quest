@@ -14,7 +14,7 @@ export const setKeys = (fn) => { keyHandler = fn; };
 document.addEventListener('keydown', (e) => keyHandler?.(e));
 document.addEventListener('click', (e) => {
   const say = e.target.closest('[data-say]');
-  if (say) speak(say.dataset.say);
+  if (say) speak(say.dataset.say, { slow: 'slow' in say.dataset });
 });
 
 // Phones: when the on-screen keyboard takes a big bite of the screen, mark the body so
@@ -139,9 +139,12 @@ export function renderHud() {
 
 // ---- small pieces ----
 
-export const audioBtn = (text) => (hasVoice() ? `<button class="btn icon" data-say="${esc(text)}" aria-label="Play sound">🔊</button>` : '');
+export const audioBtn = (text) => (hasVoice()
+  ? `<span class="audio-pair"><button class="btn icon" data-say="${esc(text)}" aria-label="Play sound">🔊</button><button class="btn icon slow-btn" data-say="${esc(text)}" data-slow aria-label="Play slowly" title="Play slowly">🐢</button></span>`
+  : '');
 // A word's main line: big kanji with the kana reading under it, or just the kana.
-export const wordHead = (w) => (w.kanji
-  ? `<div class="word-kanji kanji">${esc(w.kanji)}</div><div class="word-reading kana">${esc(w.kana)}</div>`
-  : `<div class="word kana">${esc(w.kana)}</div>`);
+// The kana is the main text (it's what you read); the kanji spelling sits in a labelled box.
+export const wordHead = (w) => `<div class="word kana">${esc(w.kana)}</div>${w.kanji
+  ? `<div class="kanji-pill"><span>in kanji</span><b class="kanji">${esc(w.kanji)}</b></div>`
+  : ''}`;
 export const chips = (labels) => `<div class="chips">${labels.map((k) => `<span class="chip kana">${esc(k)}</span>`).join('')}</div>`;
