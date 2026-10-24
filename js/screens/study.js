@@ -1,7 +1,8 @@
 // The daily session: intros and quizzes on the bottom, the battle on top, then a summary.
 import * as store from '../store.js';
 import { state } from '../store.js';
-import { Session, isCorrect, itemFor } from '../session.js';
+import { Session, isCorrect, itemFor, shuffle } from '../session.js';
+import { SITUATIONS, REGISTER } from '../phrases.js';
 import { Battle, BattleScene } from '../battle.js';
 import { wordTip } from '../vocab.js';
 import { KANJI_BY_CHAR } from '../kanji.js';
@@ -72,13 +73,24 @@ function renderIntro(step) {
   const it = step.item;
   const isWord = it.type === 'word';
   const prev = session.steps[session.i - 1];
-  if (!prev || prev.type !== 'intro') {
-    scene?.say(isWord ? 'New words to learn!' : 'A new kana!');
+  if (!prev || prev.type !== 'intro' || prev.item.type !== it.type) {
+    const say = { word: 'New words to learn!', phrase: 'Useful phrases!', kanji: it.radical ? 'A kanji building block!' : 'New kanji!' }[it.type];
+    scene?.say(say || 'A new kana!');
     sfx('learn');
   }
   const tip = isWord ? wordTip(it) : '';
+  if (it.type === 'phrase') {
+    $('#stage').innerHTML = phraseCard(it, `
+      <div class="row">${audioBtn(it.kana)}<button class="btn primary grow" id="next">Got it →</button></div>`);
+    $('#next').onclick = advance;
+    $('#next').focus();
+    if (state.settings.autoplay) speak(it.kana);
+    setKeys((e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advance(); }
+    });
+    return;
+  }
   if (it.type === 'kanji') {
-    if (!prev || prev.type !== 'intro') scene?.say(it.radical ? 'A kanji building block!' : 'New kanji!');
     $('#stage').innerHTML = kanjiCard(it, `
       <div class="row"><button class="btn primary grow" id="next">Got it →</button></div>`);
     $('#next').onclick = advance;
@@ -129,9 +141,28 @@ export function kanjiCard(k, footer = '', isNew = true) {
     </div>`;
 }
 
+export function phraseCard(p, footer = '', isNew = true) {
+  const sit = SITUATIONS[p.situation];
+  return `
+    <div class="card intro pop">
+      <div class="tag">${isNew ? 'New phrase' : 'Phrase'} · ${sit.emoji} ${esc(sit.name)}</div>
+      <div class="sentence kana">${esc(p.jp)}</div>
+      <div class="romaji phrase-romaji">${esc(p.romaji)}</div>
+      <div class="meaning big">${esc(p.en)}</div>
+      <div class="register reg-${p.register}">${REGISTER[p.register]}</div>
+      ${p.note ? `<p class="mnemonic">${esc(p.note)}</p>` : ''}
+      ${footer}
+    </div>`;
+}
+
 // ---- quizzes ----
 
 const PROMPTS = {
+  pmeaning: () => 'What does this mean?',
+  psay: () => 'How would you say this?',
+  pgap: () => 'Fill the gap',
+  pbuild: () => 'Put the words in order',
+  plisten: () => 'What did you hear?',
   kmeaning: (it) => (it.radical ? 'What does this building block mean?' : 'What does this kanji mean?'),
   kchar: () => 'Which kanji means this?',
   kread: () => 'How is this word read?',
@@ -156,12 +187,18 @@ function promptHtml(step) {
     case 'recall': return `${p}<div class="emoji">${it.emoji}</div><div class="meaning big">${esc(it.meaning)}</div>`;
     case 'kmeaning': return `${p}<div class="glyph kanji">${it.char}</div>`;
     case 'kchar': return `${p}<div class="meaning big">${esc(it.meaning)}</div>`;
+    case 'pmeaning': return `${p}<div class="sentence kana">${esc(it.jp)}</div>`;
+    case 'psay': return `${p}<div class="tag">${SITUATIONS[it.situation].emoji} ${esc(SITUATIONS[it.situation].name)}</div><div class="meaning big">${esc(it.en)}</div>`;
+    case 'pgap': return `${p}<div class="sentence kana">${it.chunks.map((c, i) => (i === step.gap ? '<span class="gap">　　　</span>' : esc(c))).join(' ')}</div><div class="muted">${esc(it.en)}</div>`;
+    case 'plisten': return `${p}<button class="btn listen" data-say="${esc(it.kana)}">🔊 Play again</button>`;
     case 'kread': return `${p}<div class="word kanji">${esc(step.readWord.kanji)}</div><div class="muted">meaning: ${esc(step.readWord.meaning)}</div>`;
     default: return p;
   }
 }
 
 function choiceLabel(step, c) {
+  if (c.type === 'chunk') return `<span class="kana">${esc(c.text)}</span>`;
+  if (c.type === 'phrase') return step.mode === 'psay' ? `<span class="kana">${esc(c.jp)}</span>` : `<span>${esc(c.en)}</span>`;
   if (c.type === 'kanji') return step.mode === 'kchar' ? `<span class="kanji">${c.char}</span>` : `<span>${esc(c.meaning)}</span>`;
   if (step.mode === 'kread') return `<span class="kana">${esc(c.kana)}</span>`;
   if (c.type === 'kana') return `<span class="kana">${c.kana}</span>`;
@@ -174,7 +211,9 @@ function renderQuiz(step) {
   const stage = $('#stage');
   const t0 = performance.now();
   const typed = step.mode === 'type' || step.mode === 'recall';
-  const answerKey = step.mode === 'kread' ? step.readWord.key : it.key;
+  let answerKey = it.key;
+  if (step.mode === 'kread') answerKey = step.readWord.key;
+  if (step.mode === 'pgap') answerKey = `gap:${it.chunks[step.gap]}`;
   let answered = false;
 
   if (step.mode === 'sentence') {
@@ -207,6 +246,39 @@ function renderQuiz(step) {
     $('#show').onclick = show;
     $('#show').focus();
     setKeys((e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); } });
+  } else if (step.mode === 'pbuild') {
+    // Tap the chunks in order; tap a placed chunk to send it back.
+    let tiles = shuffle(it.chunks.map((text, i) => ({ text, i })));
+    for (let n = 0; n < 5 && tiles.map((t) => t.text).join(' ') === it.jp; n++) tiles = shuffle(tiles);
+    const placed = [];
+    const draw = () => {
+      stage.innerHTML = `
+        <div class="card quiz">
+          ${promptHtml(step)}
+          <div class="meaning big">${esc(it.en)}</div>
+          <div class="build-line">${placed.map((t, n) => `<button class="chunk placed kana" data-n="${n}">${esc(t.text)}</button>`).join('') || '<span class="muted">Tap the words below</span>'}</div>
+          <div class="build-tiles">${tiles.map((t, n) => `<button class="chunk kana" data-t="${n}" ${placed.includes(t) ? 'disabled' : ''}><small>${n + 1}</small>${esc(t.text)}</button>`).join('')}</div>
+          <div id="fb"></div>
+        </div>`;
+      $$('.chunk[data-t]', stage).forEach((b) => { b.onclick = () => place(tiles[Number(b.dataset.t)]); });
+      $$('.chunk.placed', stage).forEach((b) => { b.onclick = () => { if (answered) return; placed.splice(Number(b.dataset.n), 1); draw(); }; });
+    };
+    const place = (t) => {
+      if (answered || placed.includes(t)) return;
+      placed.push(t);
+      draw();
+      if (placed.length === tiles.length) {
+        const built = placed.map((x) => x.text).join(' ');
+        $$('.chunk', stage).forEach((b) => { b.disabled = true; });
+        finish(built === it.jp, built === it.jp ? null : built);
+      }
+    };
+    draw();
+    setKeys((e) => {
+      const n = Number(e.key);
+      if (n >= 1 && n <= tiles.length) place(tiles[n - 1]);
+      if (e.key === 'Backspace' && placed.length && !answered) { placed.pop(); draw(); }
+    });
   } else if (typed) {
     const placeholder = step.mode === 'recall' ? 'type it in romaji or kana' : 'type it in romaji';
     stage.innerHTML = `
@@ -228,8 +300,8 @@ function renderQuiz(step) {
     });
     $('#idk').onclick = () => finish(false);
   } else {
-    const textual = ['meaning', 'listen', 'kmeaning'].includes(step.mode) && it.type !== 'kana';
-    const wordGrid = ['reverse', 'kread'].includes(step.mode);
+    const textual = ['meaning', 'listen', 'kmeaning', 'pmeaning', 'psay', 'plisten'].includes(step.mode) && it.type !== 'kana';
+    const wordGrid = ['reverse', 'kread', 'pgap'].includes(step.mode);
     stage.innerHTML = `
       <div class="card quiz">
         ${promptHtml(step)}
@@ -240,7 +312,7 @@ function renderQuiz(step) {
       </div>`;
     const buttons = $$('.choice', stage);
     buttons.forEach((b) => { b.onclick = () => choose(b); });
-    if (step.mode === 'listen') speak(it.kana);
+    if (step.mode === 'listen' || step.mode === 'plisten') speak(it.kana);
     setKeys((e) => {
       const n = Number(e.key);
       if (n >= 1 && n <= buttons.length) choose(buttons[n - 1]);
@@ -282,23 +354,26 @@ function renderQuiz(step) {
     if (step.mode === 'kread') answerLine = `<b class="kana">${esc(step.readWord.kanji)}</b> <span class="kana">${esc(step.readWord.kana)}</span> · ${esc(step.readWord.meaning)}`;
     else if (it.type === 'kanji') answerLine = `<b class="kana">${it.char}</b> ${esc(it.meaning)} <span class="kana muted">${esc(it.readings)}</span>`;
     else if (it.type === 'sentence') answerLine = correct ? 'Nice! It\'ll come back later.' : 'It\'ll come back again soon.';
+    else if (it.type === 'phrase') answerLine = `<b class="kana">${esc(it.jp)}</b><br><span>${esc(it.romaji)}</span> · ${esc(it.en)}`;
     else if (it.type === 'word') answerLine = `<b class="kana">${esc(it.kana)}</b> <span>${esc(it.romaji)}</span> · ${esc(it.meaning)}`;
     else answerLine = `<b class="kana">${it.kana}</b> = ${it.romaji}`;
 
     if (correct) {
       card.classList.add('flash-right');
       $('#fb').innerHTML = `<div class="fb right"><span>${answerLine}</span><span class="xp">+${res.gained} XP</span></div>`;
-      const t = setTimeout(advance, it.type === 'word' ? 1300 : 900);
+      const t = setTimeout(advance, { word: 1300, phrase: 1700 }[it.type] || 900);
       setKeys((e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(t); advance(); } });
       return;
     }
     card.classList.add('shake');
     let note = '';
-    if (typeof given === 'string') note = `<div class="muted">You typed “${esc(given)}”</div>`;
+    if (typeof given === 'string') note = `<div class="muted">You ${step.mode === 'pbuild' ? 'built' : 'typed'} “${esc(given)}”</div>`;
+    else if (given?.type === 'phrase') note = `<div class="muted">You picked ${esc(given.jp)} (${esc(given.en)})</div>`;
     else if (given) note = `<div class="muted">You picked ${given.type === 'word' ? `${esc(given.kana)} (${esc(given.meaning)})` : given.type === 'kanji' ? `${given.char} (${esc(given.meaning)})` : `“${esc(given.romaji)}”`}</div>`;
     let help;
     if (it.type === 'word') help = `${it.emoji} ${esc(wordTip(it) || (it.kanji ? `Kanji: ${it.kanji}` : ''))}`;
     else if (it.type === 'sentence') help = esc(it.en || '');
+    else if (it.type === 'phrase') help = esc(it.note || '');
     else help = esc(mnemonicFor(it));
     $('#fb').innerHTML = `
       <div class="fb wrong">
@@ -362,7 +437,7 @@ async function finishSession() {
         ${b.kos ? `<div class="muted">Knocked out ${plural(b.kos, 'time')}, revived by the lantern.</div>` : ''}
       </div>
       ${defeated ? `<h3>Defeated</h3><div class="chips">${defeated}</div>` : ''}
-      ${s.learned.length ? `<h3>Learned today</h3>${chips(s.learned.map((it) => it.kana))}` : ''}
+      ${s.learned.length ? `<h3>Learned today</h3>${chips(s.learned.map((it) => it.jp || it.kana))}` : ''}
       <p class="muted center">Tomorrow: ${plural(tomorrow, 'review')}.</p>
       <button class="btn primary big" id="home">Back home</button>
       ${upcoming ? `<button class="btn ghost" id="extra">Learn another row: <span class="kana">${upcoming.name}</span></button>` : ''}

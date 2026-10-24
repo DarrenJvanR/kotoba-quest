@@ -2,6 +2,8 @@
 import { GROUPS } from './kana.js';
 import { WORDS, isUnlocked } from './vocab.js';
 import { KANJI } from './kanji.js';
+import { PHRASES } from './phrases.js';
+import { unknownKana } from './stories.js';
 import { review } from './fsrs.js';
 
 const KEY = 'kotoba-quest-v1';
@@ -31,7 +33,7 @@ function fresh() {
     streak: { count: 0, last: null, freezes: FREEZES_PER_MONTH, month: monthKey() },
     history: {},
     newToday: { day: null, groups: [], words: [], bonus: 0, bonusWords: 0 },
-    settings: { rowsPerDay: 1, wordsPerDay: 5, kanjiPerDay: 3, autoplay: true, listening: true, sfx: true, kanaFont: 'gothic' },
+    settings: { rowsPerDay: 1, wordsPerDay: 5, phrasesPerDay: 3, kanjiPerDay: 3, autoplay: true, listening: true, sfx: true, kanaFont: 'gothic' },
   };
 }
 
@@ -104,8 +106,9 @@ export function cardLevel(key) {
 
 function newTodayLog() {
   const day = today();
-  if (state.newToday.day !== day) state.newToday = { day, groups: [], words: [], kanji: [], bonus: 0, bonusWords: 0 };
+  if (state.newToday.day !== day) state.newToday = { day, groups: [], words: [], phrases: [], kanji: [], bonus: 0, bonusWords: 0 };
   state.newToday.words ||= [];
+  state.newToday.phrases ||= [];
   state.newToday.kanji ||= [];
   state.newToday.bonusWords ||= 0;
   return state.newToday;
@@ -171,6 +174,32 @@ export function addBonusWords() {
 
 export function readyWordCount() {
   return WORDS.filter((w) => !state.cards[w.key] && isUnlocked(w, state.cards)).length;
+}
+
+// Phrases unlock like words: once every kana in them has been learned.
+export const phraseUnlocked = (p) => unknownKana(p.jp, state.cards).length === 0;
+
+export function nextNewPhrases() {
+  const log = newTodayLog();
+  const picked = PHRASES.filter((p) => log.phrases.includes(p.key) && !state.cards[p.key]);
+  let budget = state.settings.phrasesPerDay - log.phrases.length;
+  for (const p of PHRASES) {
+    if (budget <= 0) break;
+    if (state.cards[p.key] || log.phrases.includes(p.key) || !phraseUnlocked(p)) continue;
+    picked.push(p);
+    budget -= 1;
+  }
+  return picked;
+}
+
+export function markPhraseStarted(key) {
+  const log = newTodayLog();
+  if (!log.phrases.includes(key)) log.phrases.push(key);
+  save();
+}
+
+export function readyPhraseCount() {
+  return PHRASES.filter((p) => !state.cards[p.key] && phraseUnlocked(p)).length;
 }
 
 // Kanji to teach next (library must be built). A kanji waits until its parts are known

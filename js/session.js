@@ -3,6 +3,7 @@
 import { BY_KANA, ITEMS, lookalikes } from './kana.js';
 import { WORDS, WORD_BY_KEY, isWordCorrect } from './vocab.js';
 import { KANJI, KANJI_BY_KEY } from './kanji.js';
+import { PHRASES, PHRASE_BY_KEY } from './phrases.js';
 import { Rating } from './fsrs.js';
 import * as store from './store.js';
 
@@ -16,6 +17,7 @@ function sentenceItem(id) {
 export function itemFor(key) {
   if (key.startsWith('w:')) return WORD_BY_KEY[key];
   if (key.startsWith('k:')) return KANJI_BY_KEY[key];
+  if (key.startsWith('p:')) return PHRASE_BY_KEY[key];
   if (key.startsWith('s:')) return sentenceItem(key.slice(2));
   return BY_KANA[key];
 }
@@ -46,6 +48,8 @@ export function gradeFor({ correct, ms, mode, isNew, item, selfGrade }) {
     const easy = item.type === 'word' ? 4000 + 500 * item.units.length : 3000;
     const slow = item.type === 'word' ? 12000 : 8000;
     g = ms <= easy ? Rating.Easy : ms <= slow ? Rating.Good : Rating.Hard;
+  } else if (item.type === 'phrase') {
+    g = ms <= 8000 + 1500 * item.chunks.length ? Rating.Good : Rating.Hard;
   } else {
     g = ms <= (item.type === 'kana' ? 6000 : 7000) ? Rating.Good : Rating.Hard;
   }
@@ -103,6 +107,29 @@ function kanjiChoices(item, pool, mode) {
   return shuffle([item, ...picked]);
 }
 
+// Phrase options: other phrases (same situation and already met first), or for a gap,
+// other chunks that end the same way so the choice is about meaning, not grammar.
+function phraseChoices(item, pool, mode, gap) {
+  if (mode === 'pgap') {
+    const answer = item.chunks[gap];
+    const tail = answer.slice(-1);
+    const all = [...new Set(PHRASES.flatMap((p) => p.chunks))].filter((c) => c !== answer && !item.chunks.includes(c));
+    const picked = [...shuffle(all.filter((c) => c.slice(-1) === tail)), ...shuffle(all)].filter((c, i, a) => a.indexOf(c) === i).slice(0, 3);
+    return shuffle([answer, ...picked]).map((text) => ({ key: `gap:${text}`, type: 'chunk', text }));
+  }
+  const picked = [];
+  const add = (x) => {
+    if (picked.length >= 3 || x === item || x.en === item.en || x.kana === item.kana || picked.includes(x)) return;
+    picked.push(x);
+  };
+  const met = PHRASES.filter((p) => pool.has(p.key));
+  shuffle(met.filter((p) => p.situation === item.situation)).forEach(add);
+  shuffle(met).forEach(add);
+  shuffle(PHRASES.filter((p) => p.situation === item.situation)).forEach(add);
+  shuffle(PHRASES).forEach(add);
+  return shuffle([item, ...picked]);
+}
+
 export class Session {
   constructor({ voice }) {
     this.voice = voice;
@@ -126,6 +153,11 @@ export class Session {
     for (const w of shuffle(words)) this.steps.push(this.quiz(w, { first: true, isNew: true, mode: 'meaning' }));
     for (const w of shuffle(words)) this.steps.push(this.quiz(w, { mode: 'reverse' }));
     newItems.push(...words);
+    const phrases = store.nextNewPhrases();
+    for (const p of phrases) this.steps.push({ type: 'intro', item: p });
+    for (const p of shuffle(phrases)) this.steps.push(this.quiz(p, { first: true, isNew: true, mode: 'pmeaning' }));
+    for (const p of shuffle(phrases)) this.steps.push(this.quiz(p, { mode: p.chunks.length > 1 ? 'pbuild' : 'psay' }));
+    newItems.push(...phrases);
     const kanji = store.nextNewKanji();
     for (const k of kanji) this.steps.push({ type: 'intro', item: k });
     for (const k of shuffle(kanji)) this.steps.push(this.quiz(k, { first: true, isNew: true, mode: 'kmeaning' }));
@@ -146,6 +178,13 @@ export class Session {
     const r = Math.random();
     const listen = this.voice() && store.state.settings.listening;
     if (item.type === 'sentence') return 'sentence';
+    if (item.type === 'phrase') {
+      const multi = item.chunks.length > 1;
+      if (listen && r < 0.15) return 'plisten';
+      if (multi && r < 0.35) return 'pbuild';
+      if (multi && r < 0.55) return 'pgap';
+      return r < 0.78 ? 'psay' : 'pmeaning';
+    }
     if (item.type === 'kanji') {
       if (!item.radical && item.words.length && r < 0.3) return 'kread';
       return r < 0.65 ? 'kmeaning' : 'kchar';
@@ -175,15 +214,19 @@ export class Session {
     if (step.type === 'intro') {
       if (step.group) store.markGroupsStarted([step.group.id]);
       else if (step.item.type === 'kanji') store.markKanjiStarted(step.item.key);
+      else if (step.item.type === 'phrase') store.markPhraseStarted(step.item.key);
       else store.markWordStarted(step.item.key);
     }
     if (step.type === 'quiz') {
       const it = step.item;
       if (step.mode === 'listen' && !this.voice()) step.mode = it.type === 'word' ? 'meaning' : 'pick';
+      if (step.mode === 'plisten' && !this.voice()) step.mode = 'pmeaning';
+      if (step.mode === 'pgap' && step.gap === undefined) step.gap = Math.floor(Math.random() * it.chunks.length);
       if (step.mode === 'kread' && !step.readWord) step.readWord = shuffle(it.words)[0];
-      const needsChoices = !['type', 'recall', 'sentence'].includes(step.mode);
+      const needsChoices = !['type', 'recall', 'sentence', 'pbuild'].includes(step.mode);
       if (needsChoices && !step.choices) {
-        if (it.type === 'kanji') step.choices = kanjiChoices({ ...it, readWord: step.readWord }, this.pool, step.mode);
+        if (it.type === 'phrase') step.choices = phraseChoices(it, this.pool, step.mode, step.gap);
+        else if (it.type === 'kanji') step.choices = kanjiChoices({ ...it, readWord: step.readWord }, this.pool, step.mode);
         else if (it.type === 'word') step.choices = wordChoices(it, this.pool);
         else step.choices = kanaChoices(it, this.pool);
       }
@@ -207,7 +250,7 @@ export class Session {
       gained = step.first ? 10 + Math.min(s.combo, 10) : 3;
     } else {
       s.combo = 0;
-      const retryMode = { word: 'meaning', kanji: 'kmeaning', sentence: 'sentence' }[step.item.type] || 'type';
+      const retryMode = { word: 'meaning', kanji: 'kmeaning', sentence: 'sentence', phrase: 'pmeaning' }[step.item.type] || 'type';
       const retry = this.quiz(step.item, { mode: retryMode });
       this.steps.splice(Math.min(this.i + RETRY_GAP, this.steps.length), 0, retry);
     }

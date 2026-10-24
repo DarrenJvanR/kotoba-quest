@@ -1,0 +1,228 @@
+// Everyday phrases by situation. Spaces split a phrase into the chunks used by the
+// build-it and fill-the-gap exercises. A phrase unlocks once you can read all its kana.
+// [id, japanese, english, note, register, romaji override]
+import { romajiOf } from './vocab.js';
+
+export const SITUATIONS = {
+  greet: { name: 'Greetings and basics', emoji: '👋' },
+  meet: { name: 'Meeting people', emoji: '🤝' },
+  help: { name: 'Getting by', emoji: '🧭' },
+  shop: { name: 'Shopping', emoji: '🛍️' },
+  food: { name: 'Eating out', emoji: '🍜' },
+  way: { name: 'Directions and travel', emoji: '🚃' },
+  time: { name: 'Time and plans', emoji: '📅' },
+  feel: { name: 'Feelings', emoji: '💬' },
+  daily: { name: 'Daily life', emoji: '🏠' },
+  sos: { name: 'Emergencies and health', emoji: '🚑' },
+};
+
+const DECK = {
+  greet: [
+    ['g1', 'おはよう ございます', 'Good morning', 'With friends, just おはよう.', 'polite'],
+    ['g2', 'こんにちは', 'Hello / good afternoon', 'The は at the end is read "wa".', 'any', 'konnichiwa'],
+    ['g3', 'こんばんは', 'Good evening', 'The は is read "wa" here too.', 'any', 'konbanwa'],
+    ['g4', 'おやすみなさい', 'Good night', 'Friends just say おやすみ.', 'polite'],
+    ['g5', 'さようなら', 'Goodbye', 'Sounds quite final. Friends say じゃあね or またね.', 'any'],
+    ['g6', 'じゃあ また', 'See you later', 'Casual. The polite version is では また.', 'casual'],
+    ['g7', 'またね', 'See you!', 'Very casual, for friends.', 'casual'],
+    ['g8', 'ありがとう ございます', 'Thank you very much', 'ありがとう on its own is casual.', 'polite'],
+    ['g9', 'どう いたしまして', "You're welcome", '', 'any'],
+    ['g10', 'すみません', 'Excuse me / sorry', 'Also how you get someone\'s attention, like calling a waiter.', 'polite'],
+    ['g11', 'ごめんなさい', "I'm sorry", 'A personal apology. Friends say ごめん.', 'any'],
+    ['g12', 'はい、 そうです', "Yes, that's right", '', 'polite'],
+    ['g13', 'いいえ、 ちがいます', "No, that's not right", 'ちがいます means "it\'s different", a gentle way to say no.', 'polite'],
+    ['g14', 'いただきます', 'Thanks for the food (before eating)', 'Said before every meal.', 'any'],
+    ['g15', 'ごちそうさまでした', 'Thank you for the meal (after eating)', '', 'polite'],
+    ['g16', 'いってきます', "I'm off! (leaving home)", 'Whoever stays answers いってらっしゃい.', 'any'],
+    ['g17', 'ただいま', "I'm home!", 'The family answers おかえり.', 'any'],
+    ['g18', 'おつかれさまです', 'Thanks for your hard work', 'Said to coworkers or teammates, in passing or at the end of the day.', 'polite'],
+  ],
+  meet: [
+    ['m1', 'はじめまして', 'Nice to meet you (first meeting)', 'The first thing you say to someone new.', 'any'],
+    ['m2', 'わたしは キツネです', "I'm Kitsune", 'Put your own name in place of キツネ.', 'polite'],
+    ['m3', 'おなまえは なんですか', "What's your name?", '', 'polite'],
+    ['m4', 'よろしく おねがいします', 'Nice to meet you / please treat me well', 'Said right after introducing yourself.', 'polite'],
+    ['m5', 'どこから きましたか', 'Where are you from?', 'Literally "where did you come from?"', 'polite'],
+    ['m6', 'イギリスから きました', "I'm from the UK", 'Swap in your country: アメリカ, カナダ...', 'polite'],
+    ['m7', 'おしごとは なんですか', 'What do you do for work?', '', 'polite'],
+    ['m8', 'がくせいです', "I'm a student", '', 'polite'],
+    ['m9', 'にほんごを べんきょうして います', "I'm studying Japanese", '〜て います means "am ~ing".', 'polite'],
+    ['m10', 'にほんごが すこし わかります', 'I understand a little Japanese', '', 'polite'],
+    ['m11', 'しゅみは なんですか', 'What are your hobbies?', '', 'polite'],
+    ['m12', 'アニメが すきです', 'I like anime', 'X が すきです means "I like X".', 'polite'],
+    ['m13', 'なんさいですか', 'How old are you?', 'More polite: おいくつですか.', 'polite'],
+    ['m14', 'おげんきですか', 'How are you?', 'Used when you haven\'t seen someone for a while, not every day.', 'polite'],
+    ['m15', 'げんきです', "I'm fine", '', 'polite'],
+    ['m16', 'ひさしぶり', 'Long time no see', 'Polite: おひさしぶりです.', 'casual'],
+    ['m17', 'また あいましょう', "Let's meet again", '〜ましょう means "let\'s ~".', 'polite'],
+    ['m18', 'これは ともだちの タヌキです', 'This is my friend Tanuki', 'の links two nouns: ともだちの タヌキ = "Tanuki, my friend".', 'polite'],
+  ],
+  help: [
+    ['h1', 'わかりません', "I don't understand", '', 'polite'],
+    ['h2', 'もう いちど おねがいします', 'Once more, please', '', 'polite'],
+    ['h3', 'ゆっくり はなして ください', 'Please speak slowly', '〜て ください means "please ~".', 'polite'],
+    ['h4', 'えいごを はなせますか', 'Can you speak English?', '', 'polite'],
+    ['h5', 'これは なんですか', 'What is this?', '', 'polite'],
+    ['h6', 'にほんごで なんと いいますか', 'How do you say it in Japanese?', '', 'polite'],
+    ['h7', 'どういう いみですか', 'What does it mean?', '', 'polite'],
+    ['h8', 'ちょっと まって ください', 'Please wait a moment', '', 'polite'],
+    ['h9', 'だいじょうぶです', "It's okay / I'm fine", 'Also a polite "no thank you".', 'polite'],
+    ['h10', 'てつだって ください', 'Please help me', '', 'polite'],
+    ['h11', 'しりません', "I don't know", 'Can sound blunt. わかりません is softer.', 'polite'],
+    ['h12', 'かいて ください', 'Please write it down', '', 'polite'],
+    ['h13', 'トイレは どこですか', 'Where is the toilet?', '', 'polite'],
+    ['h14', 'しゃしんを とっても いいですか', 'May I take a photo?', '〜ても いいですか means "is it okay if I ~?"', 'polite'],
+    ['h15', 'ここに すわっても いいですか', 'May I sit here?', '', 'polite'],
+    ['h16', 'なるほど', 'I see', 'Shows you\'ve followed what was said.', 'any'],
+    ['h17', 'ほんとうですか', 'Really?', 'Casual: ほんとう？', 'polite'],
+    ['h18', 'そうですね', "That's right / let me see", 'Agreeing, or buying a moment to think.', 'polite'],
+  ],
+  shop: [
+    ['s1', 'これは いくらですか', 'How much is this?', '', 'polite'],
+    ['s2', 'これを ください', "I'll take this, please", '〜を ください means "please give me ~".', 'polite'],
+    ['s3', 'みて いるだけです', "I'm just looking", '', 'polite'],
+    ['s4', 'カードで はらえますか', 'Can I pay by card?', 'で means "by / with".', 'polite'],
+    ['s5', 'げんきんで おねがいします', 'Cash, please', '', 'polite'],
+    ['s6', 'ふくろは いりません', "I don't need a bag", '', 'polite'],
+    ['s7', 'ふくろを ください', 'A bag, please', '', 'polite'],
+    ['s8', 'もっと ちいさいのは ありますか', 'Do you have a smaller one?', 'の after an adjective means "one": ちいさいの = "a small one".', 'polite'],
+    ['s9', 'ほかの いろは ありますか', 'Do you have other colours?', '', 'polite'],
+    ['s10', 'しちゃく しても いいですか', 'May I try it on?', '', 'polite'],
+    ['s11', 'ちょっと たかいですね', "It's a bit expensive", '', 'polite'],
+    ['s12', 'レシートを ください', 'A receipt, please', '', 'polite'],
+    ['s13', 'あれを みせて ください', 'Please show me that one', 'あれ is something far from both of you.', 'polite'],
+    ['s14', 'ぜんぶで いくらですか', 'How much is it altogether?', '', 'polite'],
+    ['s15', 'あたためますか', 'Shall I heat it up? (shop staff)', 'Asked about bento at convenience stores. Answer はい or だいじょうぶです.', 'polite'],
+    ['s16', 'おつりです', 'Here is your change (shop staff)', '', 'polite'],
+  ],
+  food: [
+    ['f1', 'なんめいさまですか', 'How many people? (staff)', 'You\'ll hear this as you walk in.', 'polite'],
+    ['f2', 'ふたりです', 'Two people', 'ひとり is 1 person, ふたり 2, さんにん 3.', 'polite'],
+    ['f3', 'メニューを ください', 'The menu, please', '', 'polite'],
+    ['f4', 'えいごの メニューは ありますか', 'Do you have an English menu?', '', 'polite'],
+    ['f5', 'おすすめは なんですか', 'What do you recommend?', '', 'polite'],
+    ['f6', 'これを ひとつ ください', 'One of these, please', 'ひとつ, ふたつ, みっつ count things.', 'polite'],
+    ['f7', 'ラーメンを ふたつ おねがいします', 'Two ramen, please', '', 'polite'],
+    ['f8', 'みずを ください', 'Water, please', '', 'polite'],
+    ['f9', 'おかいけい おねがいします', 'The bill, please', '', 'polite'],
+    ['f10', 'べつべつで おねがいします', 'Separate bills, please', '', 'polite'],
+    ['f11', 'とても おいしいです', "It's very tasty", '', 'polite'],
+    ['f12', 'おなかが すきました', "I'm hungry", '', 'polite'],
+    ['f13', 'のどが かわきました', "I'm thirsty", '', 'polite'],
+    ['f14', 'おなかが いっぱいです', "I'm full", '', 'polite'],
+    ['f15', 'にくが たべられません', "I can't eat meat", '〜られません means "can\'t ~".', 'polite'],
+    ['f16', 'アレルギーが あります', 'I have an allergy', '', 'polite'],
+    ['f17', 'からいですか', 'Is it spicy?', '', 'polite'],
+    ['f18', 'もう ひとつ おねがいします', 'One more, please', '', 'polite'],
+    ['f19', 'かんぱい', 'Cheers!', 'Said as everyone raises their glasses.', 'any'],
+    ['f20', 'いらっしゃいませ', 'Welcome! (staff greeting)', 'Staff say it as you come in. You don\'t need to answer.', 'polite'],
+  ],
+  way: [
+    ['w1', 'えきは どこですか', 'Where is the station?', '', 'polite'],
+    ['w2', 'まっすぐ いって ください', 'Please go straight on', '', 'polite'],
+    ['w3', 'みぎに まがって ください', 'Please turn right', '', 'polite'],
+    ['w4', 'ひだりに まがって ください', 'Please turn left', '', 'polite'],
+    ['w5', 'ちかいですか', 'Is it close?', '', 'polite'],
+    ['w6', 'とおいですか', 'Is it far?', '', 'polite'],
+    ['w7', 'あるいて なんぷん ですか', 'How many minutes on foot?', '', 'polite'],
+    ['w8', 'みちに まよいました', "I'm lost", 'Literally "I got lost on the road".', 'polite'],
+    ['w9', 'この でんしゃは きょうとに いきますか', 'Does this train go to Kyoto?', '', 'polite'],
+    ['w10', 'きっぷは どこで かえますか', 'Where can I buy a ticket?', '', 'polite'],
+    ['w11', 'つぎの えきは どこですか', "What's the next station?", '', 'polite'],
+    ['w12', 'ここで おります', "I'll get off here", '', 'polite'],
+    ['w13', 'タクシーを よんで ください', 'Please call a taxi', '', 'polite'],
+    ['w14', 'この じゅうしょまで おねがいします', 'To this address, please', 'Show the address to the driver as you say it.', 'polite'],
+    ['w15', 'ちずを かいて ください', 'Please draw me a map', '', 'polite'],
+    ['w16', 'バスていは どこですか', 'Where is the bus stop?', '', 'polite'],
+    ['w17', 'なんばんせんですか', 'Which platform is it?', 'ばんせん means platform number.', 'polite'],
+    ['w18', 'ホテルに もどりたいです', 'I want to go back to the hotel', '〜たい means "want to ~".', 'polite'],
+  ],
+  time: [
+    ['t1', 'いま なんじですか', 'What time is it now?', '', 'polite'],
+    ['t2', 'なんじに あいましょうか', 'What time shall we meet?', '', 'polite'],
+    ['t3', 'あした ひまですか', 'Are you free tomorrow?', '', 'polite'],
+    ['t4', 'いっしょに いきませんか', 'Would you like to go together?', '〜ませんか is a polite invitation.', 'polite'],
+    ['t5', 'いいですね', 'Sounds good!', '', 'polite'],
+    ['t6', 'ざんねんですが、 ちょっと…', "Sorry, that's a little...", 'Trailing off after ちょっと is the polite way to say no.', 'polite'],
+    ['t7', 'きょうは なんようびですか', 'What day is it today?', '', 'polite'],
+    ['t8', 'まいにち べんきょうします', 'I study every day', '', 'polite'],
+    ['t9', 'しゅうまつは なにを しますか', 'What do you do at the weekend?', '', 'polite'],
+    ['t10', 'もう すぐ つきます', "I'll be there soon", '', 'polite'],
+    ['t11', 'すこし おくれます', "I'll be a little late", '', 'polite'],
+    ['t12', 'じかんが ありません', "I don't have time", '', 'polite'],
+    ['t13', 'また こんど', 'Maybe next time', 'A soft way to turn down an invitation.', 'casual'],
+    ['t14', 'きょうは いそがしいです', "I'm busy today", '', 'polite'],
+  ],
+  feel: [
+    ['e1', 'たのしいです', "It's fun / I'm having fun", '', 'polite'],
+    ['e2', 'うれしいです', "I'm happy", '', 'polite'],
+    ['e3', 'つかれました', "I'm tired", '', 'polite'],
+    ['e4', 'ねむいです', "I'm sleepy", '', 'polite'],
+    ['e5', 'さむいですね', "It's cold, isn't it?", 'ね invites the other person to agree.', 'polite'],
+    ['e6', 'あついですね', "It's hot, isn't it?", '', 'polite'],
+    ['e7', 'すごい', 'Amazing!', '', 'casual'],
+    ['e8', 'かわいい', 'So cute!', '', 'casual'],
+    ['e9', 'おもしろいですね', "That's interesting / funny", '', 'polite'],
+    ['e10', 'だいすきです', 'I love it', '', 'polite'],
+    ['e11', 'あまり すきじゃ ないです', "I don't really like it", 'あまり with a negative means "not very".', 'polite'],
+    ['e12', 'こわいです', "I'm scared", '', 'polite'],
+    ['e13', 'びっくりしました', 'That surprised me', '', 'polite'],
+    ['e14', 'しんぱいしないで', "Don't worry", '', 'casual'],
+    ['e15', 'がんばって', 'Good luck! / Hang in there!', 'Very common encouragement.', 'casual'],
+    ['e16', 'がんばります', "I'll do my best", '', 'polite'],
+  ],
+  daily: [
+    ['d1', 'おふろに はいります', "I'm going to have a bath", '', 'polite'],
+    ['d2', 'もう ねます', "I'm going to bed now", '', 'polite'],
+    ['d3', 'あさごはんを たべました', 'I ate breakfast', '', 'polite'],
+    ['d4', 'てんきが いいですね', 'Nice weather, isn\'t it?', '', 'polite'],
+    ['d5', 'あめが ふって います', "It's raining", '', 'polite'],
+    ['d6', 'でんきを けして ください', 'Please turn off the light', '', 'polite'],
+    ['d7', 'まどを あけても いいですか', 'May I open the window?', '', 'polite'],
+    ['d8', 'テレビを みます', "I'll watch TV", '', 'polite'],
+    ['d9', 'ゲームを しましょう', "Let's play a game", '', 'polite'],
+    ['d10', 'おかえりなさい', 'Welcome home', 'The answer to ただいま.', 'polite'],
+  ],
+  sos: [
+    ['x1', 'たすけて', 'Help!', '', 'any'],
+    ['x2', 'きゅうきゅうしゃを よんで ください', 'Please call an ambulance', '', 'polite'],
+    ['x3', 'けいさつを よんで ください', 'Please call the police', '', 'polite'],
+    ['x4', 'いしゃを よんで ください', 'Please call a doctor', '', 'polite'],
+    ['x5', 'びょういんは どこですか', 'Where is the hospital?', '', 'polite'],
+    ['x6', 'ぐあいが わるいです', 'I feel unwell', '', 'polite'],
+    ['x7', 'あたまが いたいです', 'I have a headache', 'Body part + が いたいです means "my ~ hurts".', 'polite'],
+    ['x8', 'おなかが いたいです', 'My stomach hurts', '', 'polite'],
+    ['x9', 'さいふを なくしました', 'I lost my wallet', '', 'polite'],
+    ['x10', 'くすりは ありますか', 'Do you have any medicine?', '', 'polite'],
+    ['x11', 'あぶない', 'Watch out!', 'Literally "dangerous!"', 'any'],
+    ['x12', 'だいじょうぶですか', 'Are you okay?', '', 'polite'],
+  ],
+};
+
+const PUNCT = /[、。！？…]/g;
+
+// Romaji chunk by chunk, reading particles the way they're spoken (は wa, を o, へ e).
+function chunkRomaji(chunk) {
+  const kana = chunk.replace(PUNCT, '');
+  if (!kana) return '';
+  let r = romajiOf(kana);
+  if (kana.length > 1 && kana.endsWith('は')) r = `${r.slice(0, -2)} wa`;
+  else if (kana.length > 1 && kana.endsWith('へ')) r = `${r.slice(0, -1)} e`;
+  else if (kana.length > 1 && kana.endsWith('を')) r = `${r.slice(0, -2)} o`;
+  // Split です / でした (and a trailing か, ね, が) off the word before, as textbooks write it.
+  return r.replace(/(^|.)(desu|deshita)(ka|ne|ga)?$/, (m, pre, cop, end) => `${pre}${pre ? ' ' : ''}${cop}${end ? ` ${end}` : ''}`);
+}
+
+export const REGISTER = { polite: 'Polite', casual: 'Casual (friends)', any: 'Fine anywhere' };
+
+export const PHRASES = Object.entries(DECK).flatMap(([situation, rows]) => rows.map(([id, jp, en, note, register, override]) => {
+  const chunks = jp.split(' ');
+  return {
+    key: `p:${id}`,
+    type: 'phrase',
+    kana: jp.replace(/ /g, ''), // spoken and shown as one line
+    jp, en, note, register, situation, chunks,
+    romaji: override || chunks.map(chunkRomaji).filter(Boolean).join(' '),
+  };
+}));
+export const PHRASE_BY_KEY = Object.fromEntries(PHRASES.map((p) => [p.key, p]));

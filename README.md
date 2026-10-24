@@ -9,6 +9,7 @@ A daily Japanese trainer wrapped in a small pixel RPG. Kana, words and kanji are
 | 1 | Hiragana and katakana (208 kana, with mnemonics), FSRS reviews graded by how correct and how fast you answer, the streak lantern with monthly freezes, a kana chart, backup |
 | 2 | 299 starter words that unlock only once you can read every kana in them; the battle (kitsune hero vs. tengu, yamanba and axolotl, with a dragon-knight boss); chiptune sound effects; text-to-speech |
 | 3 | The town: 9 buildings bought with coins. The arcade has three mini-games (Kana Rain, Memory Match, Word Builder), and 8 kana-only story scenes unlock with buildings |
+| Phrases | 160 everyday phrases in 10 situations (greetings, meeting people, getting by, shopping, eating out, travel, plans, feelings, daily life, emergencies), with meaning, say-it, build-it, fill-the-gap and listening practice; they unlock once you can read their kana |
 | 4 | 90 kanji taught through their building blocks (unlocked by the library); sentence mining (save your own lines, grade yourself); a stats page with charts |
 
 **Battle rules:** each correct answer is one hit. Total monster HP equals the session's question count, so the last right answer always defeats the last monster. Misses cost hearts. At zero hearts the lantern revives you, but you lose the 3-star rating.

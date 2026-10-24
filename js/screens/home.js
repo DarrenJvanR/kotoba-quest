@@ -36,12 +36,13 @@ function showHome() {
   const newKana = store.nextNewGroups().flatMap((g) => g.items);
   const newWords = store.nextNewWords();
   const newKanji = store.nextNewKanji();
+  const newPhrases = store.nextNewPhrases();
   const extras = (screens.homeExtras?.() || []);
   const upcoming = store.upcomingGroup();
   const readyWords = store.readyWordCount();
   const tomorrow = store.dueOn(store.today() + 1);
-  const newCount = newKana.length + newWords.length + newKanji.length;
-  const mins = Math.max(1, Math.round((due * 7 + newKana.length * 35 + (newWords.length + newKanji.length) * 30 + extras.reduce((a, e) => a + (e.seconds || 0), 0)) / 60));
+  const newCount = newKana.length + newWords.length + newKanji.length + newPhrases.length;
+  const mins = Math.max(1, Math.round((due * 7 + newKana.length * 35 + (newWords.length + newKanji.length) * 30 + newPhrases.length * 45 + extras.reduce((a, e) => a + (e.seconds || 0), 0)) / 60));
 
   let msg;
   if (st.litToday) msg = 'Your lantern is lit for today. Nice work!';
@@ -53,13 +54,15 @@ function showHome() {
   let quest;
   if (due || newCount) {
     quest = `
-      <div class="stats3 ${store.hasBuilt('library') ? 'four' : ''}">
+      <div class="stats3 quest-tiles">
         <div><b>${due}</b><span>reviews</span></div>
         <div><b>${newKana.length}</b><span>new kana</span></div>
         <div><b>${newWords.length}</b><span>new words</span></div>
+        <div><b>${newPhrases.length}</b><span>new phrases</span></div>
         ${store.hasBuilt('library') ? `<div><b>${newKanji.length}</b><span>new kanji</span></div>` : ''}
       </div>
       ${newCount ? chips([...newKana, ...newWords, ...newKanji].map((it) => it.kana)) : ''}
+      ${newPhrases.length ? `<div class="phrase-preview">${newPhrases.map((p) => `<div><span class="kana">${esc(p.jp)}</span> <span class="muted">${esc(p.en)}</span></div>`).join('')}</div>` : ''}
       <button class="btn primary big" id="start">⚔️ Start battle · about ${plural(mins, 'min')}</button>`;
   } else {
     quest = `

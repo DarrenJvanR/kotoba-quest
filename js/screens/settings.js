@@ -26,6 +26,7 @@ function showSettings() {
       <h2>Daily quest</h2>
       <div class="setting"><div><b>New kana rows per day</b><span>A row is 3 to 12 kana</span></div>${seg('rowsPerDay', [[0, '0'], [1, '1'], [2, '2'], [3, '3']], s.rowsPerDay)}</div>
       <div class="setting"><div><b>New words per day</b><span>Only words you can already read</span></div>${seg('wordsPerDay', [[0, '0'], [5, '5'], [10, '10'], [15, '15']], s.wordsPerDay)}</div>
+      <div class="setting"><div><b>New phrases per day</b><span>Everyday sentences, by situation</span></div>${seg('phrasesPerDay', [[0, '0'], [2, '2'], [3, '3'], [5, '5']], s.phrasesPerDay)}</div>
       <div class="setting"><div><b>New kanji per day</b><span>Unlocks with the library in town</span></div>${seg('kanjiPerDay', [[0, '0'], [2, '2'], [3, '3'], [5, '5']], s.kanjiPerDay)}</div>
     </section>
     <section class="panel">

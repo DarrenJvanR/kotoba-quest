@@ -4,6 +4,7 @@ import { state } from '../store.js';
 import { ITEMS } from '../kana.js';
 import { WORDS } from '../vocab.js';
 import { KANJI } from '../kanji.js';
+import { PHRASES } from '../phrases.js';
 import { view, $, $$, esc, plural, setScreen, screens, go } from '../ui.js';
 import { LEVEL_MARK, levelLegend } from './library.js';
 
@@ -127,6 +128,7 @@ function levelBars() {
   const decks = [
     ['Kana', ITEMS.map((i) => i.key)],
     ['Words', WORDS.map((w) => w.key)],
+    ['Phrases', PHRASES.map((p) => p.key)],
     ['Kanji', KANJI.map((k) => k.key)],
     ['Sentences', state.sentences.map((s) => `s:${s.id}`)],
   ];
