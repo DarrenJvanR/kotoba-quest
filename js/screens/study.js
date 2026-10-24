@@ -11,6 +11,8 @@ import { sfx } from '../sfx.js';
 import { view, modal, $, $$, esc, plural, setKeys, setScreen, screens, go, onLeave, lantern, renderHud, audioBtn, chips, confirmDialog, wordHead } from '../ui.js';
 
 let session = null;
+// The typing question that currently owns the shared answer box.
+let typing = null;
 let battle = null;
 let scene = null;
 
@@ -32,7 +34,17 @@ function startSession() {
       <div class="combo"></div>
     </div>
     <div id="battle"></div>
-    <div id="stage"></div>`;
+    <div id="stage"></div>
+    <form id="typebar" class="typebar" autocomplete="off" hidden>
+      <input id="ans" class="answer" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
+      <div class="row"><button type="button" class="btn ghost" id="idk">Not sure</button><button class="btn primary grow">Check</button></div>
+    </form>`;
+  // The answer box is never rebuilt, so once the keyboard is open it stays open from one
+  // typing question to the next (phones only open it on a tap).
+  const input = $('#ans');
+  input.addEventListener('input', () => typing?.onInput(input.value));
+  $('#typebar').addEventListener('submit', (e) => { e.preventDefault(); typing?.onSubmit(input.value); });
+  $('#idk').onclick = () => typing?.onIdk();
   scene = new BattleScene($('#battle'), battle);
   scene.start();
   if (charmed) setTimeout(() => scene?.say('💗 Heart charm: 7 hearts this battle!', 2200), 700);
@@ -69,6 +81,12 @@ function renderStep() {
   const step = session.current();
   if (!step) return finishSession();
   setKeys(null);
+  const willType = step.type === 'quiz' && (step.mode === 'type' || step.mode === 'recall');
+  if (!willType) {
+    typing = null;
+    $('#typebar').hidden = true;
+    $('#ans').blur();
+  }
   $('.session-top .bar i').style.width = `${session.progress * 100}%`;
   setCombo(session.stats.combo);
   if (step.type === 'intro') renderIntro(step);
@@ -335,26 +353,28 @@ function renderQuiz(step) {
       if (e.key === 'Backspace' && placed.length && !answered) { placed.pop(); draw(); }
     });
   } else if (typed) {
-    const placeholder = step.mode === 'recall' ? 'type it in romaji or kana' : 'type it in romaji';
     stage.innerHTML = `
       <div class="card quiz">
         ${promptHtml(step)}
-        <form id="f" autocomplete="off">
-          <input id="ans" class="answer" placeholder="${placeholder}" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your answer">
-          <div class="row"><button type="button" class="btn ghost" id="idk">Not sure</button><button class="btn primary grow">Check</button></div>
-        </form>
         <div class="hint-row">${hintHtml()}<span class="hint-text" id="hintText"></span></div>
         <div id="fb"></div>
       </div>`;
     const input = $('#ans');
-    input.focus();
-    // Kana answers are short enough to accept the moment they're right.
-    if (it.type === 'kana') input.addEventListener('input', () => { if (isCorrect(it, input.value)) finish(true); });
-    $('#f').addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (input.value.trim()) finish(isCorrect(it, input.value), input.value.trim());
-    });
-    $('#idk').onclick = () => finish(false);
+    const bar = $('#typebar');
+    input.value = '';
+    input.placeholder = step.mode === 'recall' ? 'type it in romaji or kana' : 'type it in romaji';
+    bar.classList.remove('done');
+    bar.hidden = false;
+    typing = {
+      // Kana answers are short enough to accept the moment they're right.
+      onInput: (v) => { if (!answered && it.type === 'kana' && isCorrect(it, v)) finish(true); },
+      onSubmit: (v) => {
+        if (answered) { if (session?.steps[session.i] === step) advance(); return; }
+        if (v.trim()) finish(isCorrect(it, v), v.trim());
+      },
+      onIdk: () => { if (!answered) finish(false); },
+    };
+    input.focus({ preventScroll: true });
     $('#hint')?.addEventListener('click', () => {
       if (!takeHint()) return;
       const shown = it.romaji.slice(0, it.type === 'kana' ? 1 : Math.min(2, it.romaji.length - 1) || 1);
@@ -415,8 +435,8 @@ function renderQuiz(step) {
     }
     renderHud();
     setCombo(res.combo);
-    const input = $('#ans');
-    if (input) input.readOnly = true;
+    // The answer box stays focused (keyboard open) but takes no more answers for this question.
+    if (typed) $('#typebar').classList.add('done');
     const card = stage.querySelector('.card');
     const spoken = step.mode === 'kread' ? step.readWord.kana : it.type === 'kanji' ? kanjiSay(it) : it.kana;
     if (spoken && it.type !== 'sentence' && (state.settings.autoplay || !correct)) speak(spoken);

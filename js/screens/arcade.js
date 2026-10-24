@@ -166,21 +166,8 @@ function kanaRain() {
     input.addEventListener('input', () => {
       if (pop((item) => isCorrect(item, input.value))) input.value = '';
     });
-    // When the on-screen keyboard opens, shrink the field so it and the input stay in view.
-    const fit = () => {
-      const vv = window.visualViewport;
-      const viewH = vv ? vv.height : window.innerHeight;
-      const top = field.getBoundingClientRect().top;
-      const room = viewH - top - input.offsetHeight - 20;
-      field.style.height = `${Math.max(150, Math.min(340, room))}px`;
-    };
-    window.visualViewport?.addEventListener('resize', fit);
-    window.addEventListener('resize', fit);
-    cleanups.push(() => {
-      window.visualViewport?.removeEventListener('resize', fit);
-      window.removeEventListener('resize', fit);
-    });
-    fit();
+    // A fixed height that leaves room for the keyboard, so nothing jumps when it opens.
+    field.style.height = 'min(340px, 34vh)';
   }
 
   const tick = (t) => {

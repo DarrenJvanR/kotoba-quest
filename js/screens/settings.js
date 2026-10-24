@@ -1,7 +1,7 @@
 // Settings and backup.
 import * as store from '../store.js';
 import { state } from '../store.js';
-import { hasVoice, voiceName } from '../speech.js';
+import { hasVoice, voiceName, speak } from '../speech.js';
 import { ITEMS } from '../kana.js';
 import { sfx } from '../sfx.js';
 import { view, $, esc, setScreen, screens, go, confirmDialog, notify } from '../ui.js';
@@ -14,6 +14,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 export function applyFont() {
   document.body.classList.toggle('font-hand', state.settings.kanaFont === 'hand');
+}
+
+// Redraw after a change without jumping back to the top of the page.
+function refresh() {
+  const y = window.scrollY;
+  showSettings();
+  window.scrollTo(0, y);
 }
 
 function showSettings() {
@@ -44,7 +51,7 @@ function showSettings() {
     <section class="panel">
       <h2>Sound and look</h2>
       ${toggle('autoplay', 'Read words aloud automatically')}
-      <div class="setting"><div><b>Speaking speed</b><span>🐢 next to any 🔊 always plays extra slowly</span></div>${seg('speechRate', [['normal', 'Normal'], ['slow', 'Slow'], ['slower', 'Very slow']], s.speechRate)}</div>
+      <div class="setting stack"><div><b>Speaking speed</b><span>For everything read aloud: words, phrases, stories. 🐢 next to any 🔊 is always extra slow, one sound at a time.</span></div>${seg('speechRate', [['normal', 'Normal'], ['slow', 'Slow'], ['slower', 'Slower'], ['slowest', 'Slowest']], s.speechRate)}</div>
       ${toggle('listening', 'Listening questions', 'Hear it and pick the answer')}
       ${toggle('sfx', 'Battle sound effects')}
       <div class="setting"><div><b>Kana font</b></div>${seg('kanaFont', [['gothic', '<span class="kana-gothic">あ</span> Print'], ['hand', '<span class="kana-hand">あ</span> Handwritten']], s.kanaFont)}</div>
@@ -68,7 +75,7 @@ function showSettings() {
     const items = ITEMS.filter((it) => it.script === script);
     if (!await confirmDialog(`Mark all ${items.length} ${label} as known? They'll come back for a light check over the next few weeks.`, { ok: 'Skip them' })) return;
     const n = store.markKnown(items);
-    showSettings();
+    refresh();
     notify(`${n} ${label} marked as known. Words and phrases that use them are now open.`);
   };
   $('#skipHira')?.addEventListener('click', () => skip('hira', 'hiragana'));
@@ -82,7 +89,7 @@ function showSettings() {
     store.markKnown(ITEMS);
     Object.assign(s, { kanjiEarly: true, rowsPerDay: 0, wordsPerDay: 0, phrasesPerDay: 0, kanjiPerDay: Math.max(s.kanjiPerDay, 3) });
     store.save();
-    showSettings();
+    refresh();
     notify(`Done. Each day's quest now teaches ${s.kanjiPerDay} new kanji, starting with their building blocks.`);
   };
 
@@ -93,7 +100,8 @@ function showSettings() {
     s[key] = typeof s[key] === 'number' ? Number(b.dataset.v) : b.dataset.v;
     if (key === 'kanaFont') applyFont();
     store.save();
-    showSettings();
+    refresh();
+    if (key === 'speechRate') speak('ゆっくり はなして ください');
   }));
   ['autoplay', 'listening', 'sfx'].forEach((id) => {
     $(`#${id}`).onchange = (e) => {
@@ -122,7 +130,7 @@ function showSettings() {
       if (!await confirmDialog(`Replace your current progress with this backup (${cards} cards, ${data.streak?.count || 0}-day streak)?`, { ok: 'Replace' })) return;
       store.replaceState(data);
       applyFont();
-      showSettings();
+      refresh();
       notify('Backup imported. Welcome back!');
     } catch {
       notify("That file doesn't look like a Kotoba Quest backup.");
@@ -134,7 +142,7 @@ function showSettings() {
     installPrompt.prompt();
     await installPrompt.userChoice;
     installPrompt = null;
-    showSettings();
+    refresh();
   });
   $('#reset').onclick = async () => {
     if (!await confirmDialog('Erase all progress, streak, coins and town? This cannot be undone.', { ok: 'Erase everything', danger: true })) return;

@@ -17,30 +17,6 @@ document.addEventListener('click', (e) => {
   if (say) speak(say.dataset.say, { slow: 'slow' in say.dataset });
 });
 
-// Phones: when the on-screen keyboard takes a big bite of the screen, mark the body so
-// screens can shrink their decoration (the battle stage) and keep the question in view.
-// A keyboard only counts when a text box has focus and the width hasn't changed, so resizing
-// a desktop window or rotating a phone isn't mistaken for one.
-if (window.visualViewport) {
-  const vv = window.visualViewport;
-  let width = vv.width;
-  let fullHeight = vv.height;
-  const typing = () => {
-    const el = document.activeElement;
-    return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.type !== 'checkbox' && el.type !== 'file';
-  };
-  const check = () => {
-    if (Math.abs(vv.width - width) > 1) {
-      width = vv.width;
-      fullHeight = vv.height;
-    }
-    if (!typing()) fullHeight = Math.max(fullHeight, vv.height);
-    document.body.classList.toggle('kb-open', typing() && vv.height < fullHeight * 0.75);
-  };
-  vv.addEventListener('resize', check);
-  document.addEventListener('focusin', () => setTimeout(check, 350));
-  document.addEventListener('focusout', () => setTimeout(check, 50));
-}
 
 // Screens register here so modules can navigate without importing each other.
 export const screens = {};
