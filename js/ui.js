@@ -17,6 +17,19 @@ document.addEventListener('click', (e) => {
   if (say) speak(say.dataset.say);
 });
 
+// Phones: when the on-screen keyboard takes a big bite of the screen, mark the body so
+// screens can shrink their decoration (the battle stage) and keep the question in view.
+if (window.visualViewport) {
+  let fullHeight = window.visualViewport.height;
+  const check = () => {
+    const h = window.visualViewport.height;
+    if (h > fullHeight) fullHeight = h;
+    document.body.classList.toggle('kb-open', h < fullHeight * 0.72);
+  };
+  window.visualViewport.addEventListener('resize', check);
+  window.addEventListener('orientationchange', () => { fullHeight = 0; setTimeout(check, 300); });
+}
+
 // Screens register here so modules can navigate without importing each other.
 export const screens = {};
 let current = 'home';

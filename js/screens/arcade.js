@@ -76,39 +76,112 @@ function gameOver(game, score, coins, lines = '') {
 }
 
 // ---- Kana Rain ----
+// Two ways to answer: tap mode (six romaji buttons, no keyboard; the default on phones,
+// where the keyboard would cover the rain) and type mode (the default with a real keyboard).
+
+const PAD_SIZE = 6;
+const touchFirst = () => window.matchMedia('(pointer: coarse)').matches;
 
 function kanaRain() {
   const root = gameFrame('🌧️ Kana Rain');
   const pool = learnedKana();
   const GAME_MS = 60000;
+  const mode = state.settings.rainMode || (touchFirst() ? 'tap' : 'type');
   let score = 0, lives = 3, combo = 0, elapsed = 0, spawnIn = 0, last = 0, running = true;
   const drops = [];
   root.innerHTML = `
-    <div class="rain-hud"><span id="lives"></span><span id="clock">60</span></div>
+    <div class="rain-hud">
+      <span id="lives"></span>
+      <button class="btn small ghost" id="rainMode">${mode === 'tap' ? '⌨️ Type instead' : '👆 Tap instead'}</button>
+      <span id="clock">60</span>
+    </div>
     <div class="rain" id="rain"></div>
-    <input id="rainIn" class="answer" placeholder="type romaji" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the romaji">`;
+    ${mode === 'tap'
+    ? '<div class="rain-pad" id="pad"></div>'
+    : '<input id="rainIn" class="answer" placeholder="type romaji" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the romaji">'}`;
   const field = $('#rain');
-  const input = $('#rainIn');
-  input.focus();
   const hud = () => {
     $('#lives').textContent = '❤'.repeat(lives) + '🖤'.repeat(3 - lives);
     $('#score').textContent = `${score}`;
   };
   hud();
+  $('#rainMode').onclick = () => {
+    state.settings.rainMode = mode === 'tap' ? 'type' : 'tap';
+    store.save();
+    kanaRain();
+  };
 
-  input.addEventListener('input', () => {
-    const v = input.value;
-    const hit = drops.filter((d) => !d.dead && isCorrect(d.item, v)).sort((a, b) => b.y - a.y)[0];
-    if (!hit) return;
+  // Pops the lowest falling kana that matches; returns false if none did.
+  const pop = (matches) => {
+    const hit = drops.filter((d) => !d.dead && matches(d.item)).sort((a, b) => b.y - a.y)[0];
+    if (!hit) return false;
     hit.dead = true;
     combo += 1;
     score += 1 + Math.floor(combo / 5);
     hit.el.classList.add('pop-out');
     setTimeout(() => hit.el.remove(), 300);
     sfx('hit');
-    input.value = '';
     hud();
-  });
+    return true;
+  };
+
+  const cleanups = [];
+  let onSpawn = () => {};
+
+  if (mode === 'tap') {
+    // Six buttons that keep their places; a new kana's sound replaces a button nobody needs.
+    const pad = $('#pad');
+    const slots = [];
+    for (const it of shuffle(pool)) {
+      if (slots.length >= PAD_SIZE) break;
+      if (!slots.includes(it.romaji)) slots.push(it.romaji);
+    }
+    pad.innerHTML = slots.map((r, i) => `<button class="pad-btn" data-i="${i}">${r}</button>`).join('');
+    const buttons = $$('.pad-btn', pad);
+    onSpawn = (item) => {
+      if (slots.includes(item.romaji)) return;
+      const needed = new Set(drops.filter((d) => !d.dead).map((d) => d.item.romaji));
+      let i = slots.findIndex((s) => !needed.has(s));
+      if (i < 0) i = Math.floor(Math.random() * slots.length);
+      slots[i] = item.romaji;
+      buttons[i].textContent = item.romaji;
+    };
+    buttons.forEach((b) => {
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (!running) return;
+        const r = slots[Number(b.dataset.i)];
+        if (pop((item) => item.romaji === r)) return;
+        combo = 0;
+        sfx('wrong');
+        b.classList.remove('nope');
+        void b.offsetWidth;
+        b.classList.add('nope');
+        setTimeout(() => b.classList.remove('nope'), 400);
+      });
+    });
+  } else {
+    const input = $('#rainIn');
+    input.focus();
+    input.addEventListener('input', () => {
+      if (pop((item) => isCorrect(item, input.value))) input.value = '';
+    });
+    // When the on-screen keyboard opens, shrink the field so it and the input stay in view.
+    const fit = () => {
+      const vv = window.visualViewport;
+      const viewH = vv ? vv.height : window.innerHeight;
+      const top = field.getBoundingClientRect().top;
+      const room = viewH - top - input.offsetHeight - 20;
+      field.style.height = `${Math.max(150, Math.min(340, room))}px`;
+    };
+    window.visualViewport?.addEventListener('resize', fit);
+    window.addEventListener('resize', fit);
+    cleanups.push(() => {
+      window.visualViewport?.removeEventListener('resize', fit);
+      window.removeEventListener('resize', fit);
+    });
+    fit();
+  }
 
   const tick = (t) => {
     if (!running) return;
@@ -126,6 +199,7 @@ function kanaRain() {
       el.style.left = `${6 + Math.random() * 78}%`;
       field.append(el);
       drops.push({ item, el, y: -40, speed: (h + 40) / (6500 - 3000 * progress) });
+      onSpawn(item);
       spawnIn = 1700 - 900 * progress;
     }
     for (const d of drops) {
@@ -146,12 +220,16 @@ function kanaRain() {
     $('#clock').textContent = Math.max(0, Math.ceil((GAME_MS - elapsed) / 1000));
     if (lives <= 0 || elapsed >= GAME_MS) {
       running = false;
+      cleanups.forEach((f) => f());
       return gameOver('rain', score, Math.floor(score / 3), `<p class="muted center">${lives > 0 ? 'You survived the storm!' : 'The rain got through.'}</p>`);
     }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-  onLeave(() => { running = false; });
+  onLeave(() => {
+    running = false;
+    cleanups.forEach((f) => f());
+  });
 }
 
 // ---- Memory Match ----
